@@ -524,6 +524,244 @@ export const APP_CONFIG = {
   },
 
   // ============================================================
+  // PROMPT REVERSO PRO — Configurações avançadas de personalização
+  // ============================================================
+  pro: {
+    writingStyle: {
+      options: {
+        academic: {
+          label: 'Acadêmico',
+          description: 'Formal, com citações estruturadas e linguagem técnica',
+          preview: 'A análise dos dados coletados revela uma correlação significativa (r=0.87, p<0.001) entre as variáveis estudadas, corroborando hipóteses anteriormente formuladas por Smith et al. (2024).',
+        },
+        journalistic: {
+          label: 'Jornalístico',
+          description: 'Claro, objetivo, com lead informativo e pirâmide invertida',
+          preview: 'Uma nova pesquisa revelou que 73% dos brasileiros preferem consultar múltiplas fontes antes de tomar decisões importantes, segundo levantamento divulgado nesta semana.',
+        },
+        technical: {
+          label: 'Técnico',
+          description: 'Preciso, com terminologia especializada e dados quantitativos',
+          preview: 'O throughput do sistema aumentou 340% após a migração para arquitetura event-driven, com latência p99 reduzida de 850ms para 120ms em ambiente de produção.',
+        },
+        casual: {
+          label: 'Casual / Blog',
+          description: 'Acessível, conversacional, com exemplos práticos',
+          preview: 'Sabe aquela sensação de abrir mil abas pra pesquisar algo e no final não lembrar de nada? Pois é, ferramentas de IA estão mudando completamente esse jogo.',
+        },
+        executive: {
+          label: 'Executivo',
+          description: 'Direto ao ponto, com bullet points e recomendações acionáveis',
+          preview: '• Oportunidade: mercado de US$ 4.2B com CAGR de 23%\n• Risco principal: regulação pendente (prazo: Q3 2026)\n• Recomendação: investir com hedge regulatório',
+        },
+      } as Record<string, { label: string; description: string; preview: string }>,
+      default: 'academic' as string,
+    },
+    detailLevel: {
+      options: {
+        summary: {
+          label: 'Resumo',
+          pages: '~1 página',
+          readTime: '~2 min leitura',
+          maxTokens: 2000,
+          sections: ['executive_summary', 'key_findings', 'sources'],
+          description: 'Inclui: resumo executivo e achados principais',
+        },
+        standard: {
+          label: 'Padrão',
+          pages: '~3 páginas',
+          readTime: '~5 min leitura',
+          maxTokens: 6000,
+          sections: ['executive_summary', 'context', 'key_findings', 'analysis', 'conclusion', 'sources'],
+          description: 'Inclui: análise com contexto e conclusão',
+        },
+        detailed: {
+          label: 'Detalhado',
+          pages: '~8 páginas',
+          readTime: '~12 min leitura',
+          maxTokens: 12000,
+          sections: ['executive_summary', 'context', 'key_findings', 'analysis', 'counterarguments', 'conclusion', 'sources'],
+          description: 'Inclui: análise completa com contra-argumentos',
+        },
+        exhaustive: {
+          label: 'Exaustivo',
+          pages: '~16 páginas',
+          readTime: '~25 min leitura',
+          maxTokens: 24000,
+          sections: ['executive_summary', 'context', 'key_findings', 'analysis', 'deepening', 'counterarguments', 'timeline', 'comparison_table', 'conclusion', 'sources'],
+          description: 'Inclui: análise exaustiva, dados brutos e apêndices',
+        },
+      } as Record<string, { label: string; pages: string; readTime: string; maxTokens: number; sections: string[]; description: string }>,
+      default: 'standard' as string,
+    },
+    reasoningLanguage: {
+      options: {
+        pt: { label: 'Português', description: 'Raciocínio e saída em português' },
+        en: { label: 'English', description: 'Reasoning in English, output in Portuguese' },
+        auto: { label: 'Auto', description: 'IA escolhe o melhor idioma de raciocínio' },
+        bilingual: { label: 'Bilíngue', description: 'Raciocínio bilíngue com síntese cruzada' },
+      } as Record<string, { label: string; description: string }>,
+      default: 'auto' as string,
+    },
+    citationFormat: {
+      options: {
+        inline_numbered: {
+          label: 'Inline [N]',
+          description: 'Citações numeradas inline — padrão Perplexity',
+          example: 'A taxa de crescimento foi de 23% [1], superando projeções anteriores [3][5].',
+          bestFor: 'Pesquisas gerais e relatórios rápidos',
+        },
+        footnotes: {
+          label: 'Notas de Rodapé',
+          description: 'Referências em notas no final de cada seção',
+          example: 'A taxa de crescimento foi de 23%¹, superando projeções anteriores³⁵.',
+          bestFor: 'Relatórios executivos e apresentações',
+        },
+        apa7: {
+          label: 'APA 7ª ed.',
+          description: 'Autor-data entre parênteses — padrão psicologia/educação',
+          example: 'A taxa de crescimento foi de 23% (Silva, 2025), superando projeções (Costa & Lima, 2024).',
+          bestFor: 'Trabalhos acadêmicos em ciências sociais',
+        },
+        abnt: {
+          label: 'ABNT',
+          description: 'Autor-data com norma brasileira NBR 6023',
+          example: 'A taxa de crescimento foi de 23% (SILVA, 2025), superando projeções (COSTA; LIMA, 2024).',
+          bestFor: 'Trabalhos acadêmicos no Brasil',
+        },
+        ieee: {
+          label: 'IEEE',
+          description: 'Numeração sequencial entre colchetes — padrão engenharia',
+          example: 'A taxa de crescimento foi de 23% [1], superando projeções anteriores [3], [5].',
+          bestFor: 'Engenharia e computação',
+        },
+        vancouver: {
+          label: 'Vancouver',
+          description: 'Numeração sequencial superscript — padrão medicina',
+          example: 'A taxa de crescimento foi de 23%¹, superando projeções anteriores³˒⁵.',
+          bestFor: 'Ciências da saúde e biomédicas',
+        },
+      } as Record<string, { label: string; description: string; example: string; bestFor: string }>,
+      default: 'inline_numbered' as string,
+    },
+    evaluationFramework: {
+      options: {
+        craap: {
+          label: 'CRAAP',
+          description: 'Currency, Relevance, Authority, Accuracy, Purpose',
+          dimensions: ['Atualidade', 'Relevância', 'Autoridade', 'Precisão', 'Propósito'],
+          bestFor: 'Avaliação acadêmica tradicional',
+        },
+        sift: {
+          label: 'SIFT',
+          description: 'Stop, Investigate, Find, Trace',
+          dimensions: ['Parar e Avaliar', 'Investigar Fonte', 'Buscar Cobertura', 'Rastrear Origem'],
+          bestFor: 'Fact-checking rápido',
+        },
+        radar: {
+          label: 'RADAR',
+          description: 'Relevance, Authority, Date, Appearance, Reason',
+          dimensions: ['Relevância', 'Autoridade', 'Data', 'Apresentação', 'Razão'],
+          bestFor: 'Avaliação geral equilibrada',
+        },
+        custom: {
+          label: 'Personalizado',
+          description: 'Defina seus próprios critérios e pesos',
+          dimensions: [],
+          bestFor: 'Necessidades específicas',
+        },
+      } as Record<string, { label: string; description: string; dimensions: string[]; bestFor: string }>,
+      default: 'craap' as string,
+    },
+    researchMode: {
+      options: {
+        standard: {
+          label: 'Padrão',
+          description: 'Pesquisa geral balanceada',
+          icon: '🔍',
+          bestFor: 'Qualquer tipo de consulta',
+        },
+        comparative: {
+          label: 'Comparativo',
+          description: 'Análise lado a lado de tópicos, produtos ou conceitos',
+          icon: '⚖️',
+          bestFor: 'Comparar alternativas ou posições',
+        },
+        temporal: {
+          label: 'Temporal',
+          description: 'Evolução e tendências ao longo do tempo',
+          icon: '📈',
+          bestFor: 'Analisar mudanças e tendências',
+        },
+        contrarian: {
+          label: 'Contrário',
+          description: 'Apresentação balanceada de pontos e contrapontos',
+          icon: '🔄',
+          bestFor: 'Debates e questões controversas',
+        },
+        meta_analysis: {
+          label: 'Meta-análise',
+          description: 'Síntese de múltiplos estudos com métricas agregadas',
+          icon: '📊',
+          bestFor: 'Resumo de literatura científica',
+        },
+        fact_check: {
+          label: 'Fact-check',
+          description: 'Verificação de afirmações com veredito fundamentado',
+          icon: '✅',
+          bestFor: 'Verificar afirmações específicas',
+        },
+      } as Record<string, { label: string; description: string; icon: string; bestFor: string }>,
+      default: 'standard' as string,
+    },
+    reportSections: {
+      available: [
+        { id: 'executive_summary', label: 'Resumo Executivo', required: true, defaultEnabled: true },
+        { id: 'context', label: 'Contexto', required: false, defaultEnabled: true },
+        { id: 'key_findings', label: 'Achados Principais', required: false, defaultEnabled: true },
+        { id: 'analysis', label: 'Análise', required: false, defaultEnabled: true },
+        { id: 'counterarguments', label: 'Contra-argumentos e Limitações', required: false, defaultEnabled: false },
+        { id: 'deepening', label: 'Aprofundamento', required: false, defaultEnabled: false },
+        { id: 'timeline', label: 'Linha do Tempo', required: false, defaultEnabled: false },
+        { id: 'comparison_table', label: 'Tabela Comparativa', required: false, defaultEnabled: false },
+        { id: 'conclusion', label: 'Conclusão', required: false, defaultEnabled: true },
+        { id: 'sources', label: 'Fontes', required: true, defaultEnabled: true },
+      ] as Array<{ id: string; label: string; required: boolean; defaultEnabled: boolean }>,
+    },
+    advancedFilters: {
+      recency: {
+        options: [
+          { label: 'Qualquer época', value: null },
+          { label: 'Último dia', value: 'day' as const },
+          { label: 'Última semana', value: 'week' as const },
+          { label: 'Último mês', value: 'month' as const },
+          { label: 'Último ano', value: 'year' as const },
+        ],
+        default: null as null | 'day' | 'week' | 'month' | 'year',
+      },
+      sourceTypes: ['web', 'academic', 'news', 'government', 'blog', 'social'] as string[],
+      languages: [
+        { code: 'pt', label: 'Português' },
+        { code: 'en', label: 'English' },
+        { code: 'es', label: 'Español' },
+        { code: 'fr', label: 'Français' },
+        { code: 'de', label: 'Deutsch' },
+      ] as Array<{ code: string; label: string }>,
+    },
+    exportFormats: {
+      options: {
+        markdown: { label: 'Markdown', icon: '📝', description: 'Texto formatado para editores', color: 'text-gray-400' },
+        pdf: { label: 'PDF', icon: '📄', description: 'Documento portátil para impressão', color: 'text-red-400' },
+        slides: { label: 'Slides', icon: '📊', description: 'Apresentação com tópicos-chave', color: 'text-blue-400' },
+        podcast: { label: 'Script Podcast', icon: '🎙️', description: 'Roteiro conversacional para áudio', color: 'text-purple-400' },
+        social: { label: 'Thread Social', icon: '🐦', description: 'Posts encadeados para redes sociais', color: 'text-cyan-400' },
+        json: { label: 'JSON / CSV', icon: '💾', description: 'Dados estruturados para análise', color: 'text-green-400' },
+      } as Record<string, { label: string; icon: string; description: string; color: string }>,
+      default: 'markdown' as string,
+    },
+  },
+
+  // ============================================================
   // EXPORTAÇÃO
   // ============================================================
   export: {
