@@ -106,6 +106,7 @@ export function useFileUpload(configOverrides?: Partial<AttachmentConfig>) {
       }
       if (files.length > 0) {
         e.preventDefault();
+        toast.info(`${files.length} arquivo${files.length > 1 ? 's' : ''} colado${files.length > 1 ? 's' : ''}`);
         addFiles(files);
       }
     },

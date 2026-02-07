@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore, useCallback } from 'react';
 import { ImageIcon, Loader2, Download, RotateCcw, Video } from 'lucide-react';
-import { getImageModels, getVideoModels } from '@/config/models';
+import { getImageModels, getVideoModels, getModelById } from '@/config/models';
 import { taskManager } from '@/lib/store/task-manager';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -54,7 +54,7 @@ export default function GeneratePage() {
 
   const imageModelOptions = imageModels.map((m) => ({
     value: m.id,
-    label: `${m.name} (${m.provider})`,
+    label: `${m.name} (${m.provider}) — ${m.latency}`,
   }));
   const videoModelOptions = videoModels.map((m) => ({
     value: m.id,
@@ -115,7 +115,7 @@ export default function GeneratePage() {
             }`}
           >
             <ImageIcon className="h-4 w-4" />
-            Imagem ({imageModels.length} modelos)
+            Imagem ({imageModels.length} {imageModels.length === 1 ? 'modelo' : 'modelos'})
           </button>
           <button
             onClick={() => setMode('video')}
@@ -126,7 +126,7 @@ export default function GeneratePage() {
             }`}
           >
             <Video className="h-4 w-4" />
-            Vídeo ({videoModels.length} modelos)
+            Vídeo ({videoModels.length} {videoModels.length === 1 ? 'modelo' : 'modelos'})
           </button>
         </div>
 
@@ -224,11 +224,22 @@ export default function GeneratePage() {
               )}
             </div>
 
+            {/* Latency estimate */}
+            {(() => {
+              const currentModel = getModelById(mode === 'image' ? imageModel : videoModel);
+              return currentModel?.latency ? (
+                <p className="rounded-md bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+                  ⏱️ Tempo estimado: <span className="font-medium">{currentModel.latency}</span> · Modelo: <span className="font-mono">{currentModel.name}</span>
+                </p>
+              ) : null;
+            })()}
+
             <div className="flex gap-2">
               <Button
                 onClick={handleGenerate}
                 disabled={!prompt.trim() || isGenerating}
                 className="flex-1"
+                title={!prompt.trim() ? 'Digite um prompt para gerar' : undefined}
               >
                 {isGenerating ? (
                   <>
@@ -297,8 +308,8 @@ export default function GeneratePage() {
 
         {/* Info */}
         <p className="text-center text-xs text-muted-foreground">
-          {imageModels.length} modelos de imagem · {videoModels.length} modelo(s) de vídeo ·
-          Geração via Vercel AI Gateway
+          {imageModels.length} {imageModels.length === 1 ? 'modelo' : 'modelos'} de imagem · {videoModels.length} {videoModels.length === 1 ? 'modelo' : 'modelos'} de vídeo ·
+          Powered by AI
         </p>
       </div>
     </div>

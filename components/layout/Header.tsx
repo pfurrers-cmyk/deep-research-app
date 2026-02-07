@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils';
 
 const navLinks = [
   { href: '/', label: 'Pesquisa', icon: Search },
-  { href: '/generate', label: 'Imagens', icon: ImageIcon },
+  { href: '/generate', label: 'Geração', icon: ImageIcon },
   { href: '/arena', label: 'Arena', icon: Swords },
   { href: '/library', label: 'Biblioteca', icon: BookOpen },
-  { href: '/settings', label: 'Config', icon: Settings },
+  { href: '/settings', label: 'Configurações', icon: Settings },
 ] as const;
 
 export function Header() {
@@ -64,7 +64,7 @@ export function Header() {
           >
             <Search className="w-3 h-3" />
             <span>Buscar...</span>
-            <kbd className="ml-1.5 pointer-events-none rounded border bg-muted px-1 font-mono text-[10px]">⌘K</kbd>
+            <kbd className="ml-1.5 pointer-events-none rounded border bg-muted px-1 font-mono text-[10px]">{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl+K'}</kbd>
           </button>
           <VersionStamp />
           <ThemeToggle />
@@ -90,6 +90,7 @@ export function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2.5 text-sm transition-colors',
                   isActive

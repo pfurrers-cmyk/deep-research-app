@@ -51,7 +51,7 @@ export default function ArenaPage() {
   const [query, setQuery] = useState('');
   const [configs, setConfigs] = useState<ArenaConfig[]>([
     defaultConfig('a', 'Configuração A'),
-    defaultConfig('b', 'Configuração B'),
+    { ...defaultConfig('b', 'Configuração B'), depth: 'profunda' as DepthPreset },
   ]);
   const [isRunning, setIsRunning] = useState(false);
   const [stageStatus, setStageStatus] = useState<Record<string, string>>({});
@@ -222,7 +222,7 @@ export default function ArenaPage() {
                   Cancelar
                 </Button>
               ) : (
-                <Button onClick={handleRun} disabled={!query.trim()}>
+                <Button onClick={handleRun} disabled={!query.trim()} title={!query.trim() ? 'Digite um prompt para iniciar' : undefined}>
                   <Play className="h-4 w-4" />
                   Iniciar Arena
                 </Button>

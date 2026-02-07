@@ -28,6 +28,10 @@ const STAGE_TOKEN_ESTIMATES: Record<
   postProcessing: { input: 2000, output: 500 },
   researchLoop: { input: 10000, output: 2000 },
   devilsAdvocate: { input: 15000, output: 3000 },
+  mapBatch: { input: 20000, output: 3000 },
+  reduce: { input: 15000, output: 12000 },
+  enrich: { input: 20000, output: 14000 },
+  verify: { input: 25000, output: 16000 },
 };
 
 export function selectModel(

@@ -1,6 +1,8 @@
 // lib/research/types.ts — Tipos TypeScript para todo o pipeline de pesquisa
 
 import type { AppConfig, DepthPreset, DomainPreset, ExportFormat } from '@/config/defaults';
+import type { ProcessingMode } from '@/config/model-source-limits';
+export type { ProcessingMode };
 
 // ============================================================
 // UTILITY TYPES
@@ -77,7 +79,11 @@ export type PipelineStageName =
   | 'synthesis'
   | 'postProcessing'
   | 'researchLoop'
-  | 'devilsAdvocate';
+  | 'devilsAdvocate'
+  | 'mapBatch'
+  | 'reduce'
+  | 'enrich'
+  | 'verify';
 
 export type PipelineStageStatus =
   | 'pending'
@@ -244,6 +250,7 @@ export interface ResearchMetadata {
   depth: DepthPreset;
   domainPreset: DomainPreset | null;
   modelPreference: string;
+  processingMode?: ProcessingMode;
   totalSources: number;
   totalSourcesKept: number;
   totalSourcesFiltered: number;
@@ -268,7 +275,16 @@ export type PipelineEvent =
   | CostEvent
   | MetadataEvent
   | CompleteEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | ProcessingModeEvent;
+
+export interface ProcessingModeEvent {
+  type: 'processing-mode';
+  mode: ProcessingMode;
+  label: string;
+  costMultiplier: number;
+  latencyMultiplier: number;
+}
 
 export interface StageEvent {
   type: 'stage';

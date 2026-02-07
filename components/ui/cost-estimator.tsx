@@ -1,7 +1,7 @@
 // components/ui/cost-estimator.tsx — Live cost preview calculator
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { DollarSign, AlertTriangle } from 'lucide-react';
 import { getModelById } from '@/config/models';
 import { APP_CONFIG, type DepthPreset } from '@/config/defaults';
@@ -107,27 +107,38 @@ export function CostEstimator({ depth, decompositionModel, evaluationModel, synt
 
   const totalCost = stages.reduce((sum, s) => sum + s.costUSD, 0) + searchCost;
 
+  const prevCostRef = useRef(totalCost);
+  const [highlight, setHighlight] = useState(false);
+  useEffect(() => {
+    if (prevCostRef.current !== totalCost) {
+      setHighlight(true);
+      const t = setTimeout(() => setHighlight(false), 800);
+      prevCostRef.current = totalCost;
+      return () => clearTimeout(t);
+    }
+  }, [totalCost]);
+
   return (
     <div className={className}>
-      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+      <div className={`rounded-lg border bg-muted/30 p-3 space-y-2 transition-colors duration-500 ${highlight ? 'border-primary/60 bg-primary/5' : 'border-border'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <DollarSign className="h-3.5 w-3.5" />
             Custo Estimado
           </div>
-          <div className="text-lg font-bold text-foreground">
+          <div className={`text-lg font-bold transition-colors duration-500 ${highlight ? 'text-primary' : 'text-foreground'}`}>
             ${totalCost.toFixed(4)}
           </div>
         </div>
 
         <div className="space-y-1">
           {stages.map((s) => (
-            <div key={s.stage} className="flex items-center justify-between text-xs">
+            <div key={s.stage} className="flex flex-col gap-0.5 text-xs sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">{s.stage}</span>
-                <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-mono text-muted-foreground">{s.modelId.split('/')[1]}</span>
+                <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{s.modelId.split('/')[1]}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pl-0 sm:pl-0">
                 <span className="text-[10px] text-muted-foreground">{(s.estimatedInputTokens / 1000).toFixed(1)}K in · {(s.estimatedOutputTokens / 1000).toFixed(1)}K out</span>
                 <span className="font-medium">${s.costUSD.toFixed(4)}</span>
               </div>

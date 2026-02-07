@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { Bug, X, Download, Clipboard, Trash2, RefreshCw, Server, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import {
   getDebugLogs,
@@ -20,6 +21,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 export function FloatingLogButton() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [logs, setLogs] = useState<DebugLogEntry[]>([]);
   const [serverLogs, setServerLogs] = useState<DebugLogEntry[]>([]);
@@ -28,6 +30,9 @@ export function FloatingLogButton() {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+
+  const isSettingsPage = pathname === '/settings';
+  const showFab = isSettingsPage || errorCount > 0 || open;
 
   const refresh = useCallback(() => {
     const clientLogs = getDebugLogs();
@@ -99,7 +104,8 @@ export function FloatingLogButton() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button — only visible on /settings or when errors exist */}
+      {showFab && (
       <button
         onClick={() => setOpen(!open)}
         className={`fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 ${
@@ -116,6 +122,7 @@ export function FloatingLogButton() {
           </span>
         )}
       </button>
+      )}
 
       {/* Drawer */}
       {open && (
