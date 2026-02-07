@@ -1,8 +1,8 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
   version: '0.7.0',
-  buildTimestamp: '2026-02-07T13:39:27.233Z',
-  commitHash: '0463974',
+  buildTimestamp: '2026-02-07T13:42:23.987Z',
+  commitHash: 'd534b3f',
   branch: 'master',
   changelog: [
     'Vercel Agent Code Review habilitado e integrado ao pipeline',
