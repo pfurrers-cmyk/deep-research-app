@@ -11,14 +11,16 @@ Write-Host "`n========================================"  -ForegroundColor Cyan
 Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
 Write-Host "========================================`n"  -ForegroundColor Cyan
 
-Write-Host "[1/7] Atualizando buildInfo.ts..."  -ForegroundColor Yellow
+Write-Host "[1/7] Atualizando buildInfo.ts (timestamp + commitHash)..."  -ForegroundColor Yellow
 $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 $hash = git rev-parse --short HEAD 2>$null
 if (-not $hash) { $hash = "unknown" }
-$ver = "0.1.0"
-$content = "// lib/buildInfo.ts`nexport const BUILD_INFO = {`n  version: '$ver',`n  buildTimestamp: '$ts',`n  commitHash: '$hash',`n  branch: '$MainBranch',`n};"
-[System.IO.File]::WriteAllText((Join-Path $PSScriptRoot $BuildInfoPath), $content)
-Write-Host "  -> buildTimestamp: $ts"  -ForegroundColor Gray
+$biPath = Join-Path $PSScriptRoot $BuildInfoPath
+$biContent = [System.IO.File]::ReadAllText($biPath)
+$biContent = $biContent -replace "buildTimestamp: '.*?'", "buildTimestamp: '$ts'"
+$biContent = $biContent -replace "commitHash: '.*?'", "commitHash: '$hash'"
+[System.IO.File]::WriteAllText($biPath, $biContent)
+Write-Host "  -> buildTimestamp: $ts | commitHash: $hash"  -ForegroundColor Gray
 
 Write-Host "[2/7] Staging changes..."  -ForegroundColor Yellow
 git add -A 2>&1 | Out-Null

@@ -6,6 +6,7 @@ import { Search, BookOpen, Settings, Menu, X, ImageIcon, Swords } from 'lucide-r
 import { useState } from 'react';
 import { APP_CONFIG } from '@/config/defaults';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
+import { VersionStamp } from '@/components/layout/VersionStamp';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
@@ -55,6 +56,7 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          <VersionStamp />
           <ThemeToggle />
           {/* Mobile menu button */}
           <button
