@@ -27,6 +27,13 @@ export interface ResearchRequest {
     evaluation?: string;
     synthesis?: string;
   };
+  sourceConfig?: {
+    mode: 'manual';
+    fetchMin: number;
+    fetchMax: number;
+    keepMin: number;
+    keepMax: number;
+  };
   comparativeTopics?: string[];
   timeMachineFilter?: {
     recencyFilter?: 'day' | 'week' | 'month' | 'year';

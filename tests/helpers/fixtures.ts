@@ -90,6 +90,7 @@ export function createMockPreferences(overrides: Partial<UserPreferences> = {}):
     outputLanguage: 'pt-BR',
     stageModels: { decomposition: 'auto', evaluation: 'auto', synthesis: 'auto' },
     customPrompts: { decomposition: '', evaluation: '', synthesis: '' },
+    sourceConfig: { mode: 'auto', fetchMin: 5, fetchMax: 50, keepMin: 3, keepMax: 20 },
     defaultTheme: 'dark',
     updatedAt: new Date().toISOString(),
     ...overrides,

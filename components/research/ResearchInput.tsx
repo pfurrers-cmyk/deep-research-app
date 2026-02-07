@@ -1,7 +1,7 @@
 // components/research/ResearchInput.tsx — Input principal com progressive disclosure
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import { Search, Loader2, SlidersHorizontal, BookTemplate } from 'lucide-react';
 import { APP_CONFIG, type DepthPreset, type DomainPreset } from '@/config/defaults';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,16 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   const [showConfig, setShowConfig] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const { strings, depth: depthConfig, domainPresets, templates } = APP_CONFIG;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, []);
+
+  useEffect(() => { autoResize(); }, [query, autoResize]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -32,6 +42,13 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
     if (value === '/') {
       setShowConfig(true);
       setQuery('');
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as FormEvent);
     }
   };
 
@@ -48,19 +65,21 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
     <search role="search" className="w-full space-y-3">
       <form onSubmit={handleSubmit}>
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-4 top-4 h-5 w-5 text-muted-foreground" />
           <label htmlFor="research-input" className="sr-only">Campo de pesquisa</label>
-          <input
+          <textarea
+            ref={textareaRef}
             id="research-input"
-            type="search"
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={strings.placeholders.queryInput}
             disabled={isLoading}
-            className="h-14 w-full rounded-xl border border-input bg-card pl-12 pr-36 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+            rows={1}
+            className="min-h-[56px] max-h-[200px] w-full resize-none rounded-xl border border-input bg-card pl-12 pr-36 pt-4 pb-4 text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
             autoFocus
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
             {!isLoading && query.length > 0 && (
               <button
                 type="button"
