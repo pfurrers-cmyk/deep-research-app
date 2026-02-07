@@ -319,13 +319,22 @@ export const MODELS: ModelDefinition[] = [
   { id: 'openai/text-embedding-ada-002', provider: 'openai', name: 'Text Embedding Ada 002', contextWindow: 0, maxOutput: 0, streaming: false, latency: '—', tps: '—', inputPricePer1M: 0.10, outputPricePer1M: 0, tier: 'embedding', capabilities: ['embedding'] },
 
   // ================================================================
-  // GERAÇÃO DE IMAGEM (modelos conhecidos via AI Gateway)
+  // GERAÇÃO DE IMAGEM (IDs reais do AI Gateway — gateway.image())
   // ================================================================
-  { id: 'openai/gpt-image-1', provider: 'openai', name: 'GPT Image 1', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~10s', tps: '—', inputPricePer1M: 5.00, outputPricePer1M: 40.00, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'openai/dall-e-3', provider: 'openai', name: 'DALL-E 3', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~15s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'google/imagen-3', provider: 'google', name: 'Imagen 3', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'stability/stable-diffusion-3.5', provider: 'stability', name: 'Stable Diffusion 3.5', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'black-forest-labs/flux-1.1-pro', provider: 'black-forest-labs', name: 'FLUX 1.1 Pro', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-pro-1.1', provider: 'bfl', name: 'FLUX Pro 1.1', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-pro-1.1-ultra', provider: 'bfl', name: 'FLUX Pro 1.1 Ultra', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-kontext-pro', provider: 'bfl', name: 'FLUX Kontext Pro', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-kontext-max', provider: 'bfl', name: 'FLUX Kontext Max', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'google/imagen-4.0-generate-001', provider: 'google', name: 'Imagen 4.0', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'google/imagen-4.0-fast-generate-001', provider: 'google', name: 'Imagen 4.0 Fast', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~4s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'google/imagen-4.0-ultra-generate-001', provider: 'google', name: 'Imagen 4.0 Ultra', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~12s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'recraft/recraft-v3', provider: 'recraft', name: 'Recraft V3', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'recraft/recraft-v2', provider: 'recraft', name: 'Recraft V2', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~4s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+
+  // ================================================================
+  // GERAÇÃO DE VÍDEO (IDs reais do AI Gateway — gateway.video())
+  // ================================================================
+  { id: 'google/veo-3.1-generate-001', provider: 'google', name: 'Veo 3.1', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~30s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'video', capabilities: ['video-gen'] },
 ];
 
 // ============================================================
@@ -358,6 +367,10 @@ export function getTextModels(): ModelDefinition[] {
 
 export function getImageModels(): ModelDefinition[] {
   return MODELS.filter((m) => m.capabilities.includes('image-gen'));
+}
+
+export function getVideoModels(): ModelDefinition[] {
+  return MODELS.filter((m) => m.capabilities.includes('video-gen'));
 }
 
 export function getReasoningModels(): ModelDefinition[] {

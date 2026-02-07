@@ -1,50 +1,66 @@
-// app/api/generate/route.ts — Image generation API
+// app/api/generate/route.ts — Image & Video generation API via AI Gateway
 import { gateway } from '@ai-sdk/gateway';
-import { generateText } from 'ai';
+import { generateImage, experimental_generateVideo } from 'ai';
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { prompt, model, size } = body as {
+    const { prompt, model, size, mode } = body as {
       prompt: string;
       model: string;
       size?: string;
+      mode?: 'image' | 'video';
     };
 
     if (!prompt?.trim()) {
-      return Response.json({ error: 'Prompt is required' }, { status: 400 });
+      return Response.json({ error: 'Prompt é obrigatório' }, { status: 400 });
     }
 
-    const modelId = model || 'openai/gpt-image-1';
+    // ============================================================
+    // VIDEO GENERATION
+    // ============================================================
+    if (mode === 'video') {
+      const videoModelId = model || 'google/veo-3.1-generate-001';
+      const result = await experimental_generateVideo({
+        model: gateway.video(videoModelId),
+        prompt,
+      });
 
-    // For image generation models, we use generateText with the image generation tool
-    // The AI Gateway handles routing to the correct provider
-    const result = await generateText({
-      model: gateway(modelId),
-      prompt: `Generate an image based on this description: ${prompt}`,
-      providerOptions: {
-        openai: {
-          size: size || '1024x1024',
-          quality: 'high',
-        },
-      },
+      const video = result.video;
+      const base64 = video.base64;
+      const dataUrl = `data:video/mp4;base64,${base64}`;
+
+      return Response.json({
+        type: 'video',
+        videoUrl: dataUrl,
+        model: videoModelId,
+      });
+    }
+
+    // ============================================================
+    // IMAGE GENERATION
+    // ============================================================
+    const imageModelId = model || 'bfl/flux-pro-1.1';
+    const result = await generateImage({
+      model: gateway.image(imageModelId),
+      prompt,
+      size: (size || '1024x1024') as `${number}x${number}`,
     });
 
-    // The response format depends on the provider
-    // For now return the text response; actual image URL extraction
-    // depends on the specific model's response format
+    const base64 = result.image.base64;
+    const dataUrl = `data:image/png;base64,${base64}`;
+
     return Response.json({
-      imageUrl: null,
-      text: result.text,
-      model: modelId,
-      note: 'Image generation via AI Gateway. Some models may return image URLs in the text response. Direct image generation API support varies by provider configuration.',
+      type: 'image',
+      imageUrl: dataUrl,
+      model: imageModelId,
     });
   } catch (error) {
     console.error('Generate API error:', error);
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate image' },
+      { error: error instanceof Error ? error.message : 'Falha na geração' },
       { status: 500 }
     );
   }
