@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       configOverrides: body.configOverrides,
       customModelMap: body.customModelMap,
       sourceConfig: body.sourceConfig,
+      attachments: body.attachments,
     };
 
     if (!request.query.trim()) {

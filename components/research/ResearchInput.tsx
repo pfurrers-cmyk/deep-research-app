@@ -4,11 +4,18 @@
 import { useState, useRef, useCallback, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import { Search, Loader2, SlidersHorizontal, BookTemplate, Sparkles } from 'lucide-react';
 import { ProConfigPanel } from '@/components/pro/ProConfigPanel';
+import {
+  UniversalAttachment,
+  AttachmentPreview,
+  useFileUpload,
+  ATTACHMENT_CONFIGS,
+} from '@/components/shared/UniversalAttachment';
+import type { AttachmentFile } from '@/components/shared/UniversalAttachment';
 import { APP_CONFIG, type DepthPreset, type DomainPreset } from '@/config/defaults';
 import { cn } from '@/lib/utils';
 
 interface ResearchInputProps {
-  onSubmit: (query: string, depth: DepthPreset, domainPreset: DomainPreset | null) => void;
+  onSubmit: (query: string, depth: DepthPreset, domainPreset: DomainPreset | null, attachments?: AttachmentFile[]) => void;
   isLoading: boolean;
   onCancel?: () => void;
   initialDepth?: DepthPreset;
@@ -24,6 +31,20 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   const { strings, depth: depthConfig, domainPresets, templates } = APP_CONFIG;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const {
+    attachments,
+    isProcessing,
+    addFiles,
+    removeAttachment,
+    clearAttachments,
+    openFilePicker,
+    handleFileInputChange,
+    handlePaste,
+    fileInputRef,
+    acceptString,
+    config: attachConfig,
+  } = useFileUpload(ATTACHMENT_CONFIGS.research);
+
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -36,7 +57,8 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isLoading) return;
-    onSubmit(query.trim(), depth, domainPreset);
+    const readyAttachments = attachments.filter((a) => a.status === 'ready');
+    onSubmit(query.trim(), depth, domainPreset, readyAttachments.length > 0 ? readyAttachments : undefined);
   };
 
   const handleInputChange = (value: string) => {
@@ -75,6 +97,7 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={(e) => handlePaste(e)}
             placeholder={strings.placeholders.queryInput}
             disabled={isLoading}
             rows={1}
@@ -82,6 +105,20 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
             autoFocus
           />
           <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
+            {!isLoading && (
+              <UniversalAttachment
+                attachments={attachments}
+                onAddFiles={addFiles}
+                onRemove={removeAttachment}
+                config={ATTACHMENT_CONFIGS.research}
+                variant="inline"
+                fileInputRef={fileInputRef}
+                acceptString={acceptString}
+                onFileInputChange={handleFileInputChange}
+                openFilePicker={openFilePicker}
+                disabled={isLoading}
+              />
+            )}
             {!isLoading && query.length > 0 && (
               <button
                 type="button"
@@ -119,6 +156,18 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
           </div>
         </div>
       </form>
+
+      {/* Attachment chips */}
+      {attachments.length > 0 && (
+        <div className="px-1">
+          <AttachmentPreview
+            attachments={attachments}
+            onRemove={removeAttachment}
+            layout="horizontal"
+            compact
+          />
+        </div>
+      )}
 
       {/* Config summary (when collapsed but has custom config) */}
       {!showConfig && hasCustomConfig && !isLoading && (

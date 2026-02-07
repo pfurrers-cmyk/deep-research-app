@@ -7,6 +7,12 @@ import { taskManager } from '@/lib/store/task-manager';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
+import {
+  UniversalAttachment,
+  AttachmentPreview,
+  useFileUpload,
+  ATTACHMENT_CONFIGS,
+} from '@/components/shared/UniversalAttachment';
 
 type GenerateMode = 'image' | 'video';
 type ImageSize = '1024x1024' | '1792x1024' | '1024x1792';
@@ -17,6 +23,19 @@ export default function GeneratePage() {
   const [imageModel, setImageModel] = useState('bfl/flux-pro-1.1');
   const [videoModel, setVideoModel] = useState('google/veo-3.1-generate-001');
   const [size, setSize] = useState<ImageSize>('1024x1024');
+
+  const attachConfig = mode === 'image' ? ATTACHMENT_CONFIGS.imageGeneration : ATTACHMENT_CONFIGS.videoGeneration;
+  const {
+    attachments,
+    addFiles,
+    removeAttachment,
+    updatePurpose,
+    openFilePicker,
+    handleFileInputChange,
+    handlePaste,
+    fileInputRef,
+    acceptString,
+  } = useFileUpload(attachConfig);
 
   // Read from TaskManager singleton (persists across navigation)
   const genState = useSyncExternalStore(
@@ -125,6 +144,7 @@ export default function GeneratePage() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
+              onPaste={(e) => handlePaste(e)}
               placeholder={
                 mode === 'image'
                   ? 'Ex: Um gato astronauta flutuando no espaço, estilo arte digital, cores vibrantes...'
@@ -134,6 +154,35 @@ export default function GeneratePage() {
               disabled={isGenerating}
               className="w-full resize-none rounded-lg border border-input bg-card p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
             />
+
+            {/* Attachment area */}
+            <UniversalAttachment
+              attachments={attachments}
+              onAddFiles={addFiles}
+              onRemove={removeAttachment}
+              onUpdatePurpose={updatePurpose}
+              config={attachConfig}
+              variant="dropzone"
+              fileInputRef={fileInputRef}
+              acceptString={acceptString}
+              onFileInputChange={handleFileInputChange}
+              openFilePicker={openFilePicker}
+              disabled={isGenerating}
+              showPurposeSelector={true}
+              placeholder={
+                mode === 'image'
+                  ? 'Arraste uma imagem de referência ou clique para enviar'
+                  : 'Arraste imagem/vídeo de referência ou clique para enviar'
+              }
+            />
+
+            {attachments.length > 0 && (
+              <AttachmentPreview
+                attachments={attachments}
+                onRemove={removeAttachment}
+                layout="horizontal"
+              />
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">

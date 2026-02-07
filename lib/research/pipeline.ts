@@ -363,7 +363,8 @@ async function runPipeline(
       config,
       (delta) => {
         writer.writeEvent({ type: 'text-delta', text: delta });
-      }
+      },
+      request.attachments
     );
 
     costTracker.addEntry(

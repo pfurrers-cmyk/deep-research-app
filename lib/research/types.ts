@@ -14,6 +14,28 @@ export type DeepPartial<T> = {
 // REQUEST / INPUT
 // ============================================================
 
+export interface ResearchAttachment {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  category: 'image' | 'document' | 'data' | 'video' | 'audio';
+  purpose: string;
+  extractedText?: string;
+  extractedData?: {
+    preview?: Record<string, unknown>[];
+    columns?: string[];
+    totalRows?: number;
+  };
+  base64?: string;
+  metadata?: {
+    width?: number;
+    height?: number;
+    pages?: number;
+    wordCount?: number;
+  };
+}
+
 export interface ResearchRequest {
   query: string;
   depth: DepthPreset;
@@ -40,6 +62,7 @@ export interface ResearchRequest {
     afterDate?: string;
     beforeDate?: string;
   };
+  attachments?: ResearchAttachment[];
 }
 
 // ============================================================
