@@ -34,14 +34,16 @@ export async function POST(req: Request) {
       });
 
       const video = result.video;
-      const base64 = video.base64;
-      const dataUrl = `data:video/mp4;base64,${base64}`;
+      const mediaType = video.mediaType || 'video/mp4';
+      const bytes = video.uint8Array;
 
-      debug.timed('Generate', `Vídeo gerado com sucesso: ${videoModelId}`, startTime);
-      return Response.json({
-        type: 'video',
-        videoUrl: dataUrl,
-        model: videoModelId,
+      debug.timed('Generate', `Vídeo gerado: ${videoModelId} (${bytes.length} bytes)`, startTime);
+      return new Response(Buffer.from(bytes), {
+        headers: {
+          'Content-Type': mediaType,
+          'X-Generate-Type': 'video',
+          'X-Generate-Model': videoModelId,
+        },
       });
     }
 
@@ -55,14 +57,17 @@ export async function POST(req: Request) {
       size: (size || '1024x1024') as `${number}x${number}`,
     });
 
-    const base64 = result.image.base64;
-    const dataUrl = `data:image/png;base64,${base64}`;
+    const image = result.image;
+    const mediaType = image.mediaType || 'image/png';
+    const bytes = image.uint8Array;
 
-    debug.timed('Generate', `Imagem gerada com sucesso: ${imageModelId}`, startTime);
-    return Response.json({
-      type: 'image',
-      imageUrl: dataUrl,
-      model: imageModelId,
+    debug.timed('Generate', `Imagem gerada: ${imageModelId} (${bytes.length} bytes, ${mediaType})`, startTime);
+    return new Response(Buffer.from(bytes), {
+      headers: {
+        'Content-Type': mediaType,
+        'X-Generate-Type': 'image',
+        'X-Generate-Model': imageModelId,
+      },
     });
   } catch (rawError: unknown) {
     // The Gateway SDK can throw non-Error values (including Promises).
