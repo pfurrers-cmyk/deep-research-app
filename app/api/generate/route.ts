@@ -64,8 +64,14 @@ export async function POST(req: Request) {
       imageUrl: dataUrl,
       model: imageModelId,
     });
-  } catch (error: unknown) {
-    // Extract detailed error info from Gateway SDK errors
+  } catch (rawError: unknown) {
+    // The Gateway SDK can throw non-Error values (including Promises).
+    // Resolve any thrown Promise before extracting error info.
+    let error: unknown = rawError;
+    if (error instanceof Promise) {
+      try { error = await error; } catch (e) { error = e; }
+    }
+
     let errMsg = 'Falha na geração';
     let statusCode = 500;
     const errDetails: Record<string, unknown> = {};
@@ -81,6 +87,14 @@ export async function POST(req: Request) {
       if (gErr.statusCode) statusCode = gErr.statusCode as number;
       if (gErr.response) errDetails.response = String(gErr.response).slice(0, 500);
       if (gErr.cause) errDetails.cause = String(gErr.cause).slice(0, 500);
+    } else if (error && typeof error === 'object') {
+      // Handle non-Error objects (e.g. gateway response objects)
+      const obj = error as Record<string, unknown>;
+      errMsg = String(obj.message ?? obj.error ?? JSON.stringify(error).slice(0, 300));
+      if (obj.statusCode) statusCode = Number(obj.statusCode);
+      if (obj.type) errDetails.type = obj.type;
+      errDetails.rawType = typeof rawError === 'object' && rawError instanceof Promise
+        ? 'Promise (resolved)' : typeof rawError;
     } else {
       errMsg = String(error);
     }
