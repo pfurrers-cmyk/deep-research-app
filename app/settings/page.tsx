@@ -401,6 +401,40 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Chat */}
+        <Card id="sec-chat">
+          <CardHeader>
+            <CardTitle>Chat (Pergunte à IA)</CardTitle>
+            <CardDescription>
+              Modelo padrão e prompt de sistema para o chat conversacional
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Modelo padrão</label>
+              <ModelSelector
+                value={prefs.defaultChatModel ?? 'openai/gpt-4.1-mini'}
+                onChange={(v) => update({ defaultChatModel: v })}
+                mode="text"
+                label="Modelo para o chat"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Prompt de sistema customizado</label>
+              <textarea
+                value={prefs.chatSystemPrompt ?? ''}
+                onChange={(e) => update({ chatSystemPrompt: e.target.value })}
+                placeholder="Deixe vazio para usar o prompt padrão..."
+                rows={3}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none resize-y"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se preenchido, substitui o prompt de sistema padrão do chat. Suporta instruções sobre idioma, estilo, tom, etc.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Aparência */}
         <Card id="sec-aparencia">
           <CardHeader>

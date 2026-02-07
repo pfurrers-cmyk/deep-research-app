@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, BookOpen, Settings, Menu, X, ImageIcon, Swords } from 'lucide-react';
+import { Search, BookOpen, Settings, Menu, X, ImageIcon, Swords, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { APP_CONFIG } from '@/config/defaults';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
@@ -10,7 +10,8 @@ import { VersionStamp } from '@/components/layout/VersionStamp';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/', label: 'Pesquisa', icon: Search },
+  { href: '/chat', label: 'Pergunte à IA', icon: MessageSquare },
+  { href: '/', label: 'Pesquisa Profunda', icon: Search },
   { href: '/generate', label: 'Geração', icon: ImageIcon },
   { href: '/arena', label: 'Arena', icon: Swords },
   { href: '/library', label: 'Biblioteca', icon: BookOpen },

@@ -389,6 +389,16 @@ export function getEmbeddingModels(): ModelDefinition[] {
   return MODELS.filter((m) => m.capabilities.includes('embedding'));
 }
 
+export function getChatModels(): ModelDefinition[] {
+  return MODELS.filter(
+    (m) =>
+      m.capabilities.includes('text') &&
+      !m.capabilities.includes('embedding') &&
+      !m.capabilities.includes('image-gen') &&
+      !m.capabilities.includes('video-gen')
+  );
+}
+
 export function getAllProviders(): string[] {
   return [...new Set(MODELS.map((m) => m.provider))].sort();
 }
