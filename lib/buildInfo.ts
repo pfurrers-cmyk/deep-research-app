@@ -1,8 +1,8 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
   version: '0.6.0',
-  buildTimestamp: '2026-02-07T13:24:56.142Z',
-  commitHash: 'ea5de0e',
+  buildTimestamp: '2026-02-07T13:32:42.800Z',
+  commitHash: 'dddc773',
   branch: 'master',
   changelog: [
     'Sistema completo de testagem automatizada: Vitest + Playwright + LLM Evals',

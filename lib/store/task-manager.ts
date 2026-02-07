@@ -380,14 +380,35 @@ class TaskManager {
         throw new Error(`${errData.error || `HTTP ${res.status}`}${details}`);
       }
 
-      // Success responses are binary (image/video), not JSON
+      // Detect response format: binary (new API) or JSON (legacy/cached)
       const contentType = res.headers.get('Content-Type') || '';
-      const genType = (res.headers.get('X-Generate-Type') || mode) as 'image' | 'video';
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      let resultUrl: string;
+      let resultType: 'image' | 'video';
 
-      debug.info('TaskManager', `Geração concluída: ${genType}, model=${model}, ${blob.size} bytes, ${contentType}`);
-      this._generate = { ...this._generate, status: 'complete', resultUrl: blobUrl, resultType: genType };
+      if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
+        // New binary response — create blob URL
+        const blob = await res.blob();
+        resultUrl = URL.createObjectURL(blob);
+        resultType = contentType.startsWith('video/') ? 'video' : 'image';
+        debug.info('TaskManager', `Geração concluída (binary): ${resultType}, model=${model}, ${blob.size} bytes, ${contentType}`);
+      } else {
+        // Legacy JSON response (base64 data URL)
+        const data = await res.json();
+        if (data.type === 'video') {
+          resultUrl = data.videoUrl;
+          resultType = 'video';
+        } else {
+          resultUrl = data.imageUrl;
+          resultType = 'image';
+        }
+        debug.info('TaskManager', `Geração concluída (json): ${resultType}, model=${model}, url=${resultUrl ? resultUrl.slice(0, 40) + '...' : 'EMPTY'}`);
+      }
+
+      if (!resultUrl) {
+        throw new Error('API retornou resposta sem imagem/vídeo');
+      }
+
+      this._generate = { ...this._generate, status: 'complete', resultUrl, resultType };
       this._notify();
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
