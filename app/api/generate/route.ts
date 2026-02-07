@@ -115,10 +115,49 @@ export async function POST(req: Request) {
     // NEVER return a success status code for errors — Gateway SDK sometimes has statusCode: 200 on errors
     if (statusCode < 400) statusCode = 500;
 
+    // Translate cryptic Gateway SDK errors into user-friendly messages
+    errMsg = humanizeGatewayError(errMsg, errDetails);
+
     debug.error('Generate', `Erro na geração [${statusCode}]: ${errMsg}`, errDetails);
     return Response.json(
       { error: errMsg, details: errDetails },
       { status: statusCode }
     );
   }
+}
+
+// Map cryptic Gateway SDK errors to user-friendly messages
+function humanizeGatewayError(msg: string, details: Record<string, unknown>): string {
+  const cause = String(details.cause ?? '');
+  const name = String(details.name ?? '');
+
+  // GatewayResponseError with Invalid JSON — upstream provider returned non-JSON error
+  if (name === 'GatewayResponseError' || msg.includes('Invalid error response format')) {
+    return 'O provedor do modelo retornou um erro inesperado. Tente novamente ou escolha outro modelo.';
+  }
+
+  // API call errors — network/timeout issues
+  if (cause.includes('AI_APICallError') || msg.includes('AI_APICallError')) {
+    if (cause.includes('Invalid JSON') || msg.includes('Invalid JSON')) {
+      return 'O provedor do modelo retornou uma resposta inválida. Tente novamente ou escolha outro modelo.';
+    }
+    return 'Falha na comunicação com o provedor do modelo. Verifique sua conexão e tente novamente.';
+  }
+
+  // Rate limiting
+  if (msg.includes('rate limit') || msg.includes('429')) {
+    return 'Limite de requisições atingido. Aguarde alguns segundos e tente novamente.';
+  }
+
+  // Timeout
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNRESET')) {
+    return 'A geração excedeu o tempo limite. Tente novamente com um prompt mais simples.';
+  }
+
+  // Model not found
+  if (msg.includes('not found') || msg.includes('404')) {
+    return 'Modelo não encontrado no Gateway. Verifique se o modelo está disponível.';
+  }
+
+  return msg;
 }
