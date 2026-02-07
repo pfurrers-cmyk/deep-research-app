@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/api/research/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/research/[id]/followup/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/arena/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generate/route.ts": {
+      "maxDuration": 120
+    }
+  }
+}

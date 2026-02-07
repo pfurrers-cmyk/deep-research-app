@@ -1,0 +1,165 @@
+// lib/db/index.ts — IndexedDB persistence via Dexie.js
+import Dexie, { type EntityTable } from 'dexie';
+
+// ============================================================
+// STORED TYPES
+// ============================================================
+
+export interface StoredResearch {
+  id: string;
+  query: string;
+  title: string;
+  depth: string;
+  domainPreset: string | null;
+  modelPreference: string;
+  reportText: string;
+  reportHtml?: string;
+  citations: StoredCitation[];
+  subQueries: StoredSubQuery[];
+  metadata: StoredMetadata;
+  costUSD: number;
+  confidenceLevel: 'high' | 'medium' | 'low';
+  favorite: boolean;
+  tags: string[];
+  createdAt: string;
+  completedAt: string;
+  durationMs: number;
+}
+
+export interface StoredCitation {
+  index: number;
+  url: string;
+  title: string;
+  snippet: string;
+  domain: string;
+  credibilityTier: 'high' | 'medium' | 'low';
+}
+
+export interface StoredSubQuery {
+  id: string;
+  text: string;
+  language: string;
+  resultCount: number;
+}
+
+export interface StoredMetadata {
+  totalSources: number;
+  totalSourcesKept: number;
+  modelsUsed: string[];
+  pipelineVersion: string;
+}
+
+export interface StoredCostEntry {
+  id?: number;
+  researchId: string;
+  stage: string;
+  modelId: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUSD: number;
+  timestamp: string;
+}
+
+// ============================================================
+// DATABASE
+// ============================================================
+
+class ResearchDB extends Dexie {
+  researches!: EntityTable<StoredResearch, 'id'>;
+  costs!: EntityTable<StoredCostEntry, 'id'>;
+
+  constructor() {
+    super('deep-research');
+    this.version(1).stores({
+      researches: 'id, query, title, depth, createdAt, favorite, confidenceLevel, *tags',
+      costs: '++id, researchId, stage, modelId, timestamp',
+    });
+  }
+}
+
+export const db = new ResearchDB();
+
+// ============================================================
+// RESEARCH CRUD
+// ============================================================
+
+export async function saveResearch(research: StoredResearch): Promise<void> {
+  await db.researches.put(research);
+}
+
+export async function getResearch(id: string): Promise<StoredResearch | undefined> {
+  return db.researches.get(id);
+}
+
+export async function getAllResearches(): Promise<StoredResearch[]> {
+  return db.researches.orderBy('createdAt').reverse().toArray();
+}
+
+export async function searchResearches(query: string): Promise<StoredResearch[]> {
+  const q = query.toLowerCase();
+  const all = await getAllResearches();
+  return all.filter(
+    (r) =>
+      r.query.toLowerCase().includes(q) ||
+      r.title.toLowerCase().includes(q) ||
+      r.tags.some((t) => t.toLowerCase().includes(q))
+  );
+}
+
+export async function deleteResearch(id: string): Promise<void> {
+  await db.researches.delete(id);
+  await db.costs.where('researchId').equals(id).delete();
+}
+
+export async function toggleFavorite(id: string): Promise<void> {
+  const research = await db.researches.get(id);
+  if (research) {
+    await db.researches.update(id, { favorite: !research.favorite });
+  }
+}
+
+export async function addTag(id: string, tag: string): Promise<void> {
+  const research = await db.researches.get(id);
+  if (research && !research.tags.includes(tag)) {
+    await db.researches.update(id, { tags: [...research.tags, tag] });
+  }
+}
+
+export async function removeTag(id: string, tag: string): Promise<void> {
+  const research = await db.researches.get(id);
+  if (research) {
+    await db.researches.update(id, { tags: research.tags.filter((t) => t !== tag) });
+  }
+}
+
+// ============================================================
+// COST TRACKING
+// ============================================================
+
+export async function saveCostEntries(entries: StoredCostEntry[]): Promise<void> {
+  await db.costs.bulkPut(entries);
+}
+
+export async function getTotalCostUSD(): Promise<number> {
+  const all = await db.costs.toArray();
+  return all.reduce((sum, e) => sum + e.costUSD, 0);
+}
+
+export async function getCostsByDateRange(
+  startDate: string,
+  endDate: string
+): Promise<StoredCostEntry[]> {
+  return db.costs
+    .where('timestamp')
+    .between(startDate, endDate)
+    .toArray();
+}
+
+export async function getResearchCount(): Promise<number> {
+  return db.researches.count();
+}
+
+export async function clearAllData(): Promise<void> {
+  await db.researches.clear();
+  await db.costs.clear();
+}

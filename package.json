@@ -2,6 +2,9 @@
   "name": "deep-research-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,9 +12,19 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.37",
+    "ai": "^6.0.75",
+    "clsx": "^2.1.1",
+    "dexie": "^4.3.0",
+    "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "next-themes": "^0.4.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

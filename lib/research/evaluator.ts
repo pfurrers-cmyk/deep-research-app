@@ -1,0 +1,138 @@
+// lib/research/evaluator.ts — Avaliação de relevância e ranking de fontes
+import { generateObject } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
+import { selectModel } from '@/lib/ai/model-router';
+import {
+  evaluationSchema,
+  buildEvaluationPrompt,
+} from '@/lib/ai/prompts/relevance-evaluation';
+import type { AppConfig } from '@/config/defaults';
+import type { SearchResult, EvaluatedSource } from '@/lib/research/types';
+
+function getCredibilityTier(
+  url: string,
+  config: AppConfig
+): { score: number; tier: 'high' | 'medium' | 'low' } {
+  const { domainTiers } = config.sourceCredibility;
+
+  for (const suffix of domainTiers.high) {
+    if (url.includes(suffix)) return { score: 0.9, tier: 'high' };
+  }
+  for (const suffix of domainTiers.medium) {
+    if (url.includes(suffix)) return { score: 0.65, tier: 'medium' };
+  }
+  return { score: 0.4, tier: 'low' };
+}
+
+function applyCredibilityBonuses(
+  source: SearchResult,
+  baseScore: number,
+  config: AppConfig
+): number {
+  const { bonuses } = config.sourceCredibility;
+  let score = baseScore;
+
+  if (source.author) {
+    score += bonuses.hasIdentifiableAuthor;
+  }
+  if (source.publishedDate) {
+    score += bonuses.publishedDatePresent;
+    const pubDate = new Date(source.publishedDate);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    if (pubDate > oneYearAgo) {
+      score += bonuses.recentPublication;
+    }
+  }
+
+  return Math.min(score, 1.0);
+}
+
+export async function evaluateSources(
+  query: string,
+  sources: SearchResult[],
+  config: AppConfig
+): Promise<EvaluatedSource[]> {
+  const { evaluation } = config.pipeline;
+
+  if (sources.length === 0) return [];
+
+  const modelSelection = selectModel('evaluation', 'auto', 'normal', config);
+
+  const BATCH_SIZE = 15;
+  const batches: SearchResult[][] = [];
+  for (let i = 0; i < sources.length; i += BATCH_SIZE) {
+    batches.push(sources.slice(i, i + BATCH_SIZE));
+  }
+
+  const allEvaluations: Array<{
+    url: string;
+    relevanceScore: number;
+    recencyScore: number;
+    authorityScore: number;
+  }> = [];
+
+  for (const batch of batches) {
+    try {
+      const { system, prompt } = buildEvaluationPrompt(query, batch, config);
+
+      const { object } = await generateObject({
+        model: gateway(modelSelection.modelId),
+        schema: evaluationSchema,
+        system,
+        prompt,
+      });
+
+      allEvaluations.push(...object.evaluations);
+    } catch (error) {
+      console.error('Evaluation batch failed, using default scores:', error);
+      for (const source of batch) {
+        allEvaluations.push({
+          url: source.url,
+          relevanceScore: 0.5,
+          recencyScore: 0.5,
+          authorityScore: 0.5,
+        });
+      }
+    }
+  }
+
+  const evaluationMap = new Map(allEvaluations.map((e) => [e.url, e]));
+
+  const evaluated: EvaluatedSource[] = sources.map((source) => {
+    const eval_ = evaluationMap.get(source.url) ?? {
+      relevanceScore: 0.5,
+      recencyScore: 0.5,
+      authorityScore: 0.5,
+    };
+
+    const credibility = getCredibilityTier(source.url, config);
+    const credibilityScore = applyCredibilityBonuses(
+      source,
+      credibility.score,
+      config
+    );
+
+    const weightedScore =
+      eval_.relevanceScore * evaluation.weightRelevance +
+      eval_.recencyScore * evaluation.weightRecency +
+      eval_.authorityScore * evaluation.weightAuthority;
+
+    return {
+      ...source,
+      relevanceScore: eval_.relevanceScore,
+      recencyScore: eval_.recencyScore,
+      authorityScore: eval_.authorityScore,
+      weightedScore,
+      credibilityScore,
+      credibilityTier: credibility.tier,
+      flagged: credibilityScore < config.sourceCredibility.flagBelowThreshold,
+      kept: eval_.relevanceScore >= evaluation.relevanceThreshold,
+    };
+  });
+
+  return evaluated
+    .filter((s) => s.kept)
+    .sort((a, b) => b.weightedScore - a.weightedScore)
+    .slice(0, evaluation.maxSourcesToKeep);
+}

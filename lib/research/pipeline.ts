@@ -1,0 +1,430 @@
+// lib/research/pipeline.ts — Orquestrador principal do pipeline de pesquisa
+import { generateObject } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
+import { selectModel } from '@/lib/ai/model-router';
+import { createCostTracker } from '@/lib/ai/cost-estimator';
+import { getEffectiveConfig } from '@/lib/config/config-resolver';
+import {
+  decompositionSchema,
+  buildDecompositionPrompt,
+} from '@/lib/ai/prompts/query-decomposition';
+import { executeSearch } from '@/lib/research/search';
+import { evaluateSources } from '@/lib/research/evaluator';
+import { synthesizeReport } from '@/lib/research/synthesizer';
+import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
+import type { AppConfig, DepthPreset } from '@/config/defaults';
+import type {
+  ResearchRequest,
+  SubQuery,
+  SearchResult,
+  EvaluatedSource,
+  ResearchMetadata,
+  PipelineEvent,
+  DeepPartial,
+} from '@/lib/research/types';
+
+function generateId(): string {
+  return `r_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function emitStage(
+  writer: SSEWriter,
+  stage: string,
+  status: 'running' | 'completed' | 'error',
+  progress: number,
+  config: AppConfig
+) {
+  const message =
+    (config.strings.stages as Record<string, string>)[stage] ?? stage;
+  writer.writeEvent({
+    type: 'stage',
+    stage,
+    status,
+    progress,
+    message,
+  });
+}
+
+export function executePipeline(
+  request: ResearchRequest
+): { stream: ReadableStream; researchId: string } {
+  const researchId = generateId();
+  const config = getEffectiveConfig(
+    undefined,
+    request.configOverrides as DeepPartial<AppConfig> | undefined
+  );
+  const depth = request.depth;
+  const preset = config.depth.presets[depth];
+  const costTracker = createCostTracker();
+  const startTime = Date.now();
+
+  const { stream, writer } = createSSEStream();
+
+  // Run pipeline async — don't await, let it stream
+  runPipeline(writer, request, config, depth, preset, costTracker, researchId, startTime).catch(
+    (error) => {
+      console.error('Pipeline fatal error:', error);
+      writer.writeEvent({
+        type: 'error',
+        error: {
+          code: 'PIPELINE_FATAL',
+          message: error instanceof Error ? error.message : config.strings.errors.generic,
+          recoverable: false,
+        },
+      });
+      writer.close();
+    }
+  );
+
+  return { stream, researchId };
+}
+
+async function runPipeline(
+  writer: SSEWriter,
+  request: ResearchRequest,
+  config: AppConfig,
+  depth: DepthPreset,
+  preset: AppConfig['depth']['presets'][DepthPreset],
+  costTracker: ReturnType<typeof createCostTracker>,
+  researchId: string,
+  startTime: number
+) {
+  const modelsUsed: string[] = [];
+
+  // =========================================================
+  // ETAPA 1: Decomposição da Query
+  // =========================================================
+  emitStage(writer, 'decomposing', 'running', 0.05, config);
+
+  let subQueries: SubQuery[];
+  try {
+    const decompositionModel = selectModel(
+      'decomposition',
+      request.modelPreference,
+      depth,
+      config,
+      request.customModelMap
+    );
+    modelsUsed.push(decompositionModel.modelId);
+
+    const { system, prompt } = buildDecompositionPrompt(request.query, config);
+
+    const { object } = await generateObject({
+      model: gateway(decompositionModel.modelId),
+      schema: decompositionSchema,
+      system,
+      prompt,
+      abortSignal: AbortSignal.timeout(
+        config.resilience.timeoutPerStageMs.decomposition
+      ),
+    });
+
+    subQueries = object.subQueries.slice(0, preset.subQueries).map((sq, i) => ({
+      id: `sq_${i}`,
+      text: sq.text,
+      justification: sq.justification,
+      language: sq.language,
+      status: 'pending' as const,
+    }));
+
+    costTracker.addEntry(
+      'decomposition',
+      decompositionModel.modelId,
+      decompositionModel.estimatedInputTokens,
+      decompositionModel.estimatedOutputTokens
+    );
+
+    writer.writeEvent({ type: 'queries', data: subQueries });
+    emitStage(writer, 'decomposing', 'completed', 0.15, config);
+  } catch (error) {
+    console.error('Decomposition failed:', error);
+    emitStage(writer, 'decomposing', 'error', 0.15, config);
+    writer.writeEvent({
+      type: 'error',
+      error: {
+        code: 'DECOMPOSITION_FAILED',
+        message: error instanceof Error ? error.message : config.strings.errors.generic,
+        stage: 'decomposing',
+        recoverable: false,
+      },
+    });
+    writer.close();
+    return;
+  }
+
+  // =========================================================
+  // ETAPA 2: Busca Paralela
+  // =========================================================
+  emitStage(writer, 'searching', 'running', 0.2, config);
+
+  let searchResults: SearchResult[];
+  try {
+    // Resolve domain filters from preset
+    let domainFilters: string[] | undefined;
+    let languageFilters: string[] | undefined;
+
+    if (request.domainPreset && request.domainPreset in config.domainPresets) {
+      const domainConfig =
+        config.domainPresets[request.domainPreset as keyof typeof config.domainPresets];
+      if (domainConfig && typeof domainConfig === 'object' && 'searchDomainFilter' in domainConfig) {
+        domainFilters = (domainConfig as { searchDomainFilter: string[] }).searchDomainFilter;
+        languageFilters = (domainConfig as { searchLanguageFilter: string[] }).searchLanguageFilter;
+      }
+    }
+
+    searchResults = await executeSearch(
+      subQueries,
+      config,
+      (source) => {
+        writer.writeEvent({
+          type: 'source',
+          data: {
+            url: source.url,
+            title: source.title,
+            relevance: 0,
+            credibility: 0,
+            subQueryId: source.subQueryId,
+          },
+        });
+      },
+      domainFilters,
+      languageFilters
+    );
+
+    costTracker.addSearchCost(subQueries.length);
+    emitStage(writer, 'searching', 'completed', 0.4, config);
+  } catch (error) {
+    console.error('Search failed:', error);
+    emitStage(writer, 'searching', 'error', 0.4, config);
+    writer.writeEvent({
+      type: 'error',
+      error: {
+        code: 'SEARCH_FAILED',
+        message: config.strings.errors.searchFailed.replace('{n}', String(subQueries.length)),
+        stage: 'searching',
+        recoverable: false,
+      },
+    });
+    writer.close();
+    return;
+  }
+
+  if (searchResults.length === 0) {
+    writer.writeEvent({
+      type: 'error',
+      error: {
+        code: 'NO_RESULTS',
+        message: 'Nenhum resultado encontrado para as sub-queries geradas.',
+        stage: 'searching',
+        recoverable: false,
+      },
+    });
+    writer.close();
+    return;
+  }
+
+  // =========================================================
+  // ETAPA 3: Avaliação e Ranking
+  // =========================================================
+  emitStage(writer, 'evaluating', 'running', 0.45, config);
+
+  let evaluatedSources: EvaluatedSource[];
+  try {
+    const evaluationModel = selectModel(
+      'evaluation',
+      request.modelPreference,
+      depth,
+      config,
+      request.customModelMap
+    );
+    modelsUsed.push(evaluationModel.modelId);
+
+    evaluatedSources = await evaluateSources(request.query, searchResults, config);
+
+    costTracker.addEntry(
+      'evaluation',
+      evaluationModel.modelId,
+      evaluationModel.estimatedInputTokens,
+      evaluationModel.estimatedOutputTokens
+    );
+
+    writer.writeEvent({
+      type: 'evaluation',
+      data: {
+        totalFound: searchResults.length,
+        kept: evaluatedSources.length,
+        filtered: searchResults.length - evaluatedSources.length,
+      },
+    });
+
+    emitStage(writer, 'evaluating', 'completed', 0.55, config);
+  } catch (error) {
+    console.error('Evaluation failed, using raw sources:', error);
+    // Fallback: use raw sources without evaluation
+    evaluatedSources = searchResults.map((s) => ({
+      ...s,
+      relevanceScore: 0.5,
+      recencyScore: 0.5,
+      authorityScore: 0.5,
+      weightedScore: 0.5,
+      credibilityScore: 0.5,
+      credibilityTier: 'medium' as const,
+      flagged: false,
+      kept: true,
+    }));
+    emitStage(writer, 'evaluating', 'completed', 0.55, config);
+  }
+
+  // =========================================================
+  // ETAPA 4: Extração Profunda (se habilitada)
+  // =========================================================
+  if (preset.extractionEnabled) {
+    emitStage(writer, 'extracting', 'running', 0.6, config);
+    // For now, we use the content already obtained from search.
+    // Full extraction with secondary requests will be enhanced in Fase 4.
+    emitStage(writer, 'extracting', 'completed', 0.65, config);
+  }
+
+  // =========================================================
+  // ETAPA 5: Síntese do Relatório (STREAMING)
+  // =========================================================
+  emitStage(writer, 'synthesizing', 'running', 0.7, config);
+
+  let reportText = '';
+  try {
+    const synthesisModel = selectModel(
+      'synthesis',
+      request.modelPreference,
+      depth,
+      config,
+      request.customModelMap
+    );
+    modelsUsed.push(synthesisModel.modelId);
+
+    reportText = await synthesizeReport(
+      request.query,
+      evaluatedSources,
+      depth,
+      config,
+      (delta) => {
+        writer.writeEvent({ type: 'text-delta', text: delta });
+      }
+    );
+
+    costTracker.addEntry(
+      'synthesis',
+      synthesisModel.modelId,
+      synthesisModel.estimatedInputTokens,
+      synthesisModel.estimatedOutputTokens
+    );
+
+    emitStage(writer, 'synthesizing', 'completed', 0.9, config);
+  } catch (error) {
+    console.error('Synthesis failed:', error);
+    emitStage(writer, 'synthesizing', 'error', 0.9, config);
+    writer.writeEvent({
+      type: 'error',
+      error: {
+        code: 'SYNTHESIS_FAILED',
+        message: error instanceof Error ? error.message : config.strings.errors.generic,
+        stage: 'synthesizing',
+        recoverable: false,
+      },
+    });
+    writer.close();
+    return;
+  }
+
+  // =========================================================
+  // ETAPA 6: Pós-processamento
+  // =========================================================
+  emitStage(writer, 'post-processing', 'running', 0.92, config);
+
+  const durationMs = Date.now() - startTime;
+  const costBreakdown = costTracker.getBreakdown();
+
+  const metadata: ResearchMetadata = {
+    id: researchId,
+    query: request.query,
+    title: request.query.slice(0, 100),
+    depth: depth,
+    domainPreset: request.domainPreset,
+    modelPreference: request.modelPreference,
+    totalSources: searchResults.length,
+    totalSourcesKept: evaluatedSources.length,
+    totalSourcesFiltered: searchResults.length - evaluatedSources.length,
+    durationMs,
+    modelsUsed: [...new Set(modelsUsed)],
+    createdAt: new Date(startTime).toISOString(),
+    completedAt: new Date().toISOString(),
+    pipelineVersion: '1.0.0',
+  };
+
+  writer.writeEvent({ type: 'metadata', data: metadata });
+
+  writer.writeEvent({
+    type: 'cost',
+    data: {
+      stage: 'synthesis',
+      modelId: 'total',
+      inputTokens: 0,
+      outputTokens: 0,
+      costUSD: costBreakdown.totalCostUSD,
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  emitStage(writer, 'post-processing', 'completed', 0.98, config);
+  emitStage(writer, 'complete', 'completed', 1.0, config);
+
+  // Complete event with full response
+  writer.writeEvent({
+    type: 'complete',
+    data: {
+      id: researchId,
+      query: request.query,
+      report: {
+        title: metadata.title,
+        sections: [
+          {
+            id: 'full-report',
+            type: 'executive_summary',
+            title: 'Relatório Completo',
+            content: reportText,
+            confidenceScore: 0.7,
+            sourceIndices: evaluatedSources.map((_, i) => i),
+          },
+        ],
+        citations: evaluatedSources.map((s, i) => ({
+          index: i + 1,
+          url: s.url,
+          title: s.title,
+          snippet: s.snippet,
+          domain: new URL(s.url).hostname,
+          credibilityScore: s.credibilityScore,
+          credibilityTier: s.credibilityTier,
+          publishedDate: s.publishedDate,
+          author: s.author,
+        })),
+        generatedAt: metadata.completedAt,
+        modelUsed: modelsUsed[modelsUsed.length - 1] ?? 'unknown',
+        outputLanguage: config.pipeline.synthesis.outputLanguage,
+      },
+      sources: evaluatedSources,
+      subQueries: subQueries.map((sq) => ({
+        ...sq,
+        status: 'completed' as const,
+      })),
+      metadata,
+      confidence: {
+        overall: 0.7,
+        bySection: {},
+        level: 'medium',
+        suggestions: [],
+      },
+      cost: costBreakdown,
+    },
+  });
+
+  writer.close();
+}
