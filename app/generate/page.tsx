@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore, useCallback } from 'react';
 import { ImageIcon, Loader2, Download, RotateCcw, Video } from 'lucide-react';
 import { getImageModels, getVideoModels } from '@/config/models';
+import { taskManager } from '@/lib/store/task-manager';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -16,10 +17,18 @@ export default function GeneratePage() {
   const [imageModel, setImageModel] = useState('bfl/flux-pro-1.1');
   const [videoModel, setVideoModel] = useState('google/veo-3.1-generate-001');
   const [size, setSize] = useState<ImageSize>('1024x1024');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [resultType, setResultType] = useState<'image' | 'video' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+
+  // Read from TaskManager singleton (persists across navigation)
+  const genState = useSyncExternalStore(
+    taskManager.subscribe,
+    taskManager.getGenerateSnapshot,
+    taskManager.getGenerateSnapshot
+  );
+
+  const isGenerating = genState.status === 'running';
+  const resultUrl = genState.resultUrl;
+  const resultType = genState.resultType;
+  const error = genState.error;
 
   const imageModels = getImageModels();
   const videoModels = getVideoModels();
@@ -33,45 +42,16 @@ export default function GeneratePage() {
     label: `${m.name} (${m.provider})`,
   }));
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(() => {
     if (!prompt.trim()) return;
-    setIsGenerating(true);
-    setError(null);
-    setResultUrl(null);
-    setResultType(null);
-
-    try {
-      const selectedModel = mode === 'image' ? imageModel : videoModel;
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: prompt.trim(),
-          model: selectedModel,
-          size: mode === 'image' ? size : undefined,
-          mode,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.type === 'video') {
-        setResultUrl(data.videoUrl);
-        setResultType('video');
-      } else {
-        setResultUrl(data.imageUrl);
-        setResultType('image');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao gerar');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    const selectedModel = mode === 'image' ? imageModel : videoModel;
+    taskManager.executeGenerate(
+      prompt,
+      selectedModel,
+      mode,
+      mode === 'image' ? size : undefined
+    );
+  }, [prompt, mode, imageModel, videoModel, size]);
 
   const handleDownload = () => {
     if (!resultUrl) return;
@@ -82,9 +62,7 @@ export default function GeneratePage() {
   };
 
   const handleReset = () => {
-    setResultUrl(null);
-    setResultType(null);
-    setError(null);
+    taskManager.resetGenerate();
   };
 
   return (

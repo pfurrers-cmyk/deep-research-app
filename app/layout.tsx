@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { AppProvider } from '@/components/providers/app-provider';
 import { Header } from '@/components/layout/Header';
 import { ArtifactsPanel } from '@/components/artifacts/ArtifactsPanel';
+import { FloatingLogButton } from '@/components/debug/FloatingLogButton';
 import { APP_CONFIG } from '@/config/defaults';
 import './globals.css';
 
@@ -37,6 +38,7 @@ export default function RootLayout({
             <Header />
             <main className="mx-auto max-w-5xl">{children}</main>
             <ArtifactsPanel />
+            <FloatingLogButton />
           </AppProvider>
         </ThemeProvider>
       </body>

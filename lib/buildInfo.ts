@@ -1,17 +1,17 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '0.4.0',
-  buildTimestamp: '2026-02-07T12:41:06.298Z',
-  commitHash: '7389f38',
+  version: '0.5.0',
+  buildTimestamp: '2026-02-07T12:50:43.373Z',
+  commitHash: '45fdfa7',
   branch: 'master',
   changelog: [
-    'Sistema de debug logging robusto (adaptado do MemorizaUltra)',
-    'Client-side: localStorage com até 1000 entradas, export/download/clipboard',
-    'Server-side: ring buffer em memória, endpoint /api/logs',
-    'Pipeline instrumentado: todas as 6 etapas com timing e contagens',
-    'API routes /api/generate e /api/research com logging completo',
-    'LogViewer na Settings: visualizador client+server, filtros por nível, export .txt',
-    'Versão dinâmica no card Sobre (BUILD_INFO.version)',
+    'Botão flutuante de debug logs acessível em TODAS as telas (canto inferior direito)',
+    'Drawer de logs com auto-refresh 3s, filtros, export/download/clipboard, expand/minimize',
+    'Badge vermelho pulsante no botão quando há erros capturados',
+    'TaskManager singleton: tarefas (pesquisa, geração) persistem ao mudar de página',
+    'useResearch refatorado para useSyncExternalStore — navegar não mata SSE',
+    'Geração de imagem/vídeo também persiste entre navegações',
+    'Reset explícito para renovar tarefas (botão na UI)',
   ],
-  previousVersion: '0.3.0',
+  previousVersion: '0.4.0',
 };
