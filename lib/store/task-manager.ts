@@ -11,6 +11,7 @@ import type {
   SubQuery,
   ResearchMetadata,
   ResearchResponse,
+  ResearchAttachment,
 } from '@/lib/research/types';
 import { saveResearch, savePrompt, saveGeneration, type StoredResearch, type StoredPrompt, type StoredGeneration } from '@/lib/db';
 import { loadPreferences } from '@/lib/config/settings-store';
@@ -108,7 +109,7 @@ class TaskManager {
 
   // --- Research ---
 
-  executeResearch(query: string, depth: DepthPreset, domainPreset?: DomainPreset | null) {
+  executeResearch(query: string, depth: DepthPreset, domainPreset?: DomainPreset | null, attachments?: ResearchAttachment[]) {
     // Cancel any running research
     this._abortResearch?.abort();
 
@@ -122,9 +123,9 @@ class TaskManager {
     const controller = new AbortController();
     this._abortResearch = controller;
 
-    debug.info('TaskManager', `Pesquisa iniciada: "${query.slice(0, 60)}"`, { depth });
+    debug.info('TaskManager', `Pesquisa iniciada: "${query.slice(0, 60)}"`, { depth, attachments: attachments?.length ?? 0 });
 
-    this._runResearchSSE(query, depth, domainPreset ?? null, controller);
+    this._runResearchSSE(query, depth, domainPreset ?? null, controller, attachments);
   }
 
   cancelResearch() {
@@ -180,7 +181,8 @@ class TaskManager {
     query: string,
     depth: DepthPreset,
     domainPreset: string | null,
-    controller: AbortController
+    controller: AbortController,
+    attachments?: ResearchAttachment[]
   ) {
     try {
       const prefs = loadPreferences();
@@ -222,6 +224,7 @@ class TaskManager {
           modelPreference: prefs.modelPreference,
           customModelMap: Object.keys(customModelMap).length > 0 ? customModelMap : undefined,
           sourceConfig,
+          attachments: attachments?.length ? attachments : undefined,
         }),
         signal: controller.signal,
       });

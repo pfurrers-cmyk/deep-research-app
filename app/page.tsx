@@ -15,7 +15,7 @@ import { ModelRecommendationModal } from '@/components/research/ModelRecommendat
 import { CostEstimator } from '@/components/ui/cost-estimator';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
-import type { FollowUpMessage } from '@/lib/research/types';
+import type { FollowUpMessage, ResearchAttachment } from '@/lib/research/types';
 
 export default function Home() {
   const { app } = APP_CONFIG;
@@ -30,7 +30,7 @@ export default function Home() {
   const [lastQuery, setLastQuery] = useState<{ query: string; depth: string; domain: string | null }>({ query: '', depth: 'normal', domain: null });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRecommendation, setShowRecommendation] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState<{ query: string; depth: Parameters<typeof research.execute>[1]; domain: Parameters<typeof research.execute>[2] } | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState<{ query: string; depth: Parameters<typeof research.execute>[1]; domain: Parameters<typeof research.execute>[2]; attachments?: ResearchAttachment[] } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isIdle = research.status === 'idle';
@@ -38,9 +38,21 @@ export default function Home() {
   const isComplete = research.status === 'complete';
   const isError = research.status === 'error';
 
-  const handleSubmit = (query: string, depth: Parameters<typeof research.execute>[1], domainPreset: Parameters<typeof research.execute>[2]) => {
-    // Show recommendation modal before executing
-    setPendingSubmit({ query, depth, domain: domainPreset });
+  const handleSubmit = (query: string, depth: Parameters<typeof research.execute>[1], domainPreset: Parameters<typeof research.execute>[2], attachments?: ResearchAttachment[]) => {
+    // Serialize attachments (strip File objects for JSON transport)
+    const serialized = attachments?.map((a) => ({
+      id: a.id,
+      name: a.name,
+      size: a.size,
+      mimeType: a.mimeType,
+      category: a.category,
+      purpose: a.purpose,
+      extractedText: a.extractedText,
+      extractedData: a.extractedData,
+      base64: a.base64,
+      metadata: a.metadata,
+    })) as ResearchAttachment[] | undefined;
+    setPendingSubmit({ query, depth, domain: domainPreset, attachments: serialized });
     setShowRecommendation(true);
   };
 
@@ -54,7 +66,7 @@ export default function Home() {
     } else {
       sessionStorage.removeItem('__recommended_models');
     }
-    research.execute(query, depth, domain);
+    research.execute(query, depth, domain, pendingSubmit?.attachments);
     setLastQuery({ query, depth, domain: domain ?? null });
     setFollowUpMessages([]);
     dispatch({ type: 'SET_RESEARCH', payload: { savedToDb: false } });

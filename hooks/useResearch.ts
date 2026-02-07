@@ -4,6 +4,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { DepthPreset, DomainPreset } from '@/config/defaults';
 import { taskManager, type ResearchTaskState, type TaskStatus } from '@/lib/store/task-manager';
+import type { ResearchAttachment } from '@/lib/research/types';
 
 export type ResearchStatus = TaskStatus;
 
@@ -11,7 +12,8 @@ interface UseResearchReturn {
   execute: (
     query: string,
     depth: DepthPreset,
-    domainPreset?: DomainPreset | null
+    domainPreset?: DomainPreset | null,
+    attachments?: ResearchAttachment[]
   ) => void;
   cancel: () => void;
   reset: () => void;
@@ -35,8 +37,8 @@ export function useResearch(): UseResearchReturn {
   );
 
   const execute = useCallback(
-    (query: string, depth: DepthPreset, domainPreset?: DomainPreset | null) => {
-      taskManager.executeResearch(query, depth, domainPreset);
+    (query: string, depth: DepthPreset, domainPreset?: DomainPreset | null, attachments?: ResearchAttachment[]) => {
+      taskManager.executeResearch(query, depth, domainPreset, attachments);
     },
     []
   );
