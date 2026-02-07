@@ -1,16 +1,13 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '0.2.0',
-  buildTimestamp: '2026-02-07T12:10:10.143Z',
-  commitHash: '0ae6dd3',
+  version: '0.2.1',
+  buildTimestamp: '2026-02-07T12:15:38.054Z',
+  commitHash: 'aa75f1b',
   branch: 'master',
   changelog: [
-    'Version stamp visível no header com tooltip de changelog',
-    'smart-deploy.ps1 criado para deploy automatizado com Vercel Agent',
-    '13 componentes shadcn/ui instalados (input, dialog, command, tabs, etc)',
-    'Magic numbers eliminados do evaluator e cost-estimator',
-    'FollowUpMessage centralizado em types.ts',
-    '@types/node atualizado para ^22',
+    'smart-deploy.ps1: polling JSON estruturado (gh pr checks --json) em vez de regex',
+    'Detecção em tempo real do estado de cada check (nome:estado)',
+    'Poll a cada 5s (era 10s), timeout 120s (era 180s)',
   ],
-  previousVersion: '0.1.0',
+  previousVersion: '0.2.0',
 };

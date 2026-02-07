@@ -4,8 +4,8 @@ Set-Location $PSScriptRoot
 $MainBranch = "master"
 $DeployBranch = "deploy/auto-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $BuildInfoPath = "lib/buildInfo.ts"
-$MaxWaitSeconds = 180
-$PollIntervalSeconds = 10
+$MaxWaitSeconds = 120
+$PollIntervalSeconds = 5
 
 Write-Host "`n========================================"  -ForegroundColor Cyan
 Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
@@ -49,23 +49,45 @@ if ($ghOk) {
 
 $agentResult = "DIRECT_MERGE"
 if ($prUrl) {
-    Write-Host "[6/7] Aguardando Vercel Agent..."  -ForegroundColor Yellow
+    Write-Host "[6/7] Aguardando Vercel Agent (JSON polling)..."  -ForegroundColor Yellow
     $elapsed = 0
     $agentResult = "TIMEOUT"
     while ($elapsed -lt $MaxWaitSeconds) {
         Start-Sleep -Seconds $PollIntervalSeconds
         $elapsed += $PollIntervalSeconds
-        $checks = gh pr checks $DeployBranch 2>&1
-        $checksStr = "$checks"
-        Write-Host "  -> [${elapsed}s / ${MaxWaitSeconds}s] Verificando..."  -ForegroundColor Gray
-        if ($checksStr -match "fail|failure") {
+        $checksRaw = gh pr checks $DeployBranch --json name,state,description 2>&1
+        try {
+            $checksArr = $checksRaw | ConvertFrom-Json
+        } catch {
+            Write-Host "  -> [${elapsed}s] Aguardando checks aparecerem..."  -ForegroundColor Gray
+            continue
+        }
+        if (-not $checksArr -or $checksArr.Count -eq 0) {
+            Write-Host "  -> [${elapsed}s] Nenhum check registrado ainda..."  -ForegroundColor Gray
+            continue
+        }
+        $total = $checksArr.Count
+        $done = ($checksArr | Where-Object { $_.state -ne "PENDING" }).Count
+        $failed = ($checksArr | Where-Object { $_.state -eq "FAILURE" -or $_.state -eq "ERROR" })
+        $allSuccess = ($checksArr | Where-Object { $_.state -ne "SUCCESS" }).Count -eq 0
+        $names = ($checksArr | ForEach-Object { "$($_.name):$($_.state)" }) -join " | "
+        Write-Host "  -> [${elapsed}s] $done/$total concluidos - $names"  -ForegroundColor Gray
+        if ($failed.Count -gt 0) {
             $agentResult = "AGENT_REVIEW_ERRORS_FOUND"
-            Write-Host "`n  AGENT_REVIEW_ERRORS_FOUND"  -ForegroundColor Red
-            Write-Host $checksStr  -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  AGENT_REVIEW_ERRORS_FOUND"  -ForegroundColor Red
+            foreach ($f in $failed) {
+                Write-Host "    X $($f.name): $($f.description)"  -ForegroundColor Red
+            }
             break
-        } elseif ($checksStr -match "pass|success" -and $checksStr -notmatch "pending|queued|in_progress") {
+        }
+        if ($allSuccess) {
             $agentResult = "AGENT_REVIEW_PASSED"
-            Write-Host "`n  AGENT_REVIEW_PASSED"  -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  AGENT_REVIEW_PASSED"  -ForegroundColor Green
+            foreach ($c in $checksArr) {
+                Write-Host "    OK $($c.name): $($c.description)"  -ForegroundColor Green
+            }
             break
         }
     }
