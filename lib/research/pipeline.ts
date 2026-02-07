@@ -107,7 +107,11 @@ async function runPipeline(
     );
     modelsUsed.push(decompositionModel.modelId);
 
-    const { system, prompt } = buildDecompositionPrompt(request.query, config);
+    const { system, prompt } = buildDecompositionPrompt(
+      request.query,
+      config,
+      request.customPrompts?.decomposition
+    );
 
     const { object } = await generateObject({
       model: gateway(decompositionModel.modelId),
@@ -119,13 +123,25 @@ async function runPipeline(
       ),
     });
 
-    subQueries = object.subQueries.slice(0, preset.subQueries).map((sq, i) => ({
-      id: `sq_${i}`,
-      text: sq.text,
-      justification: sq.justification,
-      language: sq.language,
-      status: 'pending' as const,
-    }));
+    subQueries = object.subQueries
+      .sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+      })
+      .slice(0, preset.subQueries)
+      .map((sq, i) => ({
+        id: `sq_${i}`,
+        text: sq.text,
+        textEn: sq.textEn,
+        justification: sq.justification,
+        language: sq.language,
+        priority: sq.priority,
+        angle: sq.angle,
+        searchTerms: sq.searchTerms,
+        searchTermsPt: sq.searchTermsPt,
+        expectedSourceType: sq.expectedSourceType,
+        status: 'pending' as const,
+      }));
 
     costTracker.addEntry(
       'decomposition',

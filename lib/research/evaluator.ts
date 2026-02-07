@@ -67,9 +67,13 @@ export async function evaluateSources(
 
   const allEvaluations: Array<{
     url: string;
+    rationale: string;
     relevanceScore: number;
     recencyScore: number;
     authorityScore: number;
+    biasScore: number;
+    sourceTier: 'primary' | 'secondary' | 'tertiary';
+    contradicts?: string;
   }> = [];
 
   for (const batch of batches) {
@@ -83,15 +87,33 @@ export async function evaluateSources(
         prompt,
       });
 
-      allEvaluations.push(...object.evaluations);
+      if (object.diversityWarning) {
+        console.warn('[Evaluator] Diversity warning:', object.diversityWarning);
+      }
+
+      allEvaluations.push(
+        ...object.evaluations.map((e) => ({
+          url: e.url,
+          rationale: e.rationale,
+          relevanceScore: e.relevanceScore,
+          recencyScore: e.recencyScore,
+          authorityScore: e.authorityScore,
+          biasScore: e.biasScore,
+          sourceTier: e.sourceTier,
+          contradicts: e.contradicts ?? undefined,
+        }))
+      );
     } catch (error) {
       console.error('Evaluation batch failed, using default scores:', error);
       for (const source of batch) {
         allEvaluations.push({
           url: source.url,
+          rationale: 'Fallback — avaliação automática falhou',
           relevanceScore: 0.5,
           recencyScore: 0.5,
           authorityScore: 0.5,
+          biasScore: 0.5,
+          sourceTier: 'secondary',
         });
       }
     }
@@ -101,9 +123,13 @@ export async function evaluateSources(
 
   const evaluated: EvaluatedSource[] = sources.map((source) => {
     const eval_ = evaluationMap.get(source.url) ?? {
+      rationale: 'Sem avaliação',
       relevanceScore: 0.5,
       recencyScore: 0.5,
       authorityScore: 0.5,
+      biasScore: 0.5,
+      sourceTier: 'secondary' as const,
+      contradicts: undefined as string | undefined,
     };
 
     const credibility = getCredibilityTier(source.url, config);
@@ -113,19 +139,30 @@ export async function evaluateSources(
       config
     );
 
+    // Composite weighted score now includes bias
+    const biasWeight = 0.1;
+    const adjustedRelevanceWeight = evaluation.weightRelevance - biasWeight / 3;
+    const adjustedRecencyWeight = evaluation.weightRecency - biasWeight / 3;
+    const adjustedAuthorityWeight = evaluation.weightAuthority - biasWeight / 3;
+
     const weightedScore =
-      eval_.relevanceScore * evaluation.weightRelevance +
-      eval_.recencyScore * evaluation.weightRecency +
-      eval_.authorityScore * evaluation.weightAuthority;
+      eval_.relevanceScore * adjustedRelevanceWeight +
+      eval_.recencyScore * adjustedRecencyWeight +
+      eval_.authorityScore * adjustedAuthorityWeight +
+      (eval_.biasScore ?? 0.5) * biasWeight;
 
     return {
       ...source,
       relevanceScore: eval_.relevanceScore,
       recencyScore: eval_.recencyScore,
       authorityScore: eval_.authorityScore,
+      biasScore: eval_.biasScore,
       weightedScore,
       credibilityScore,
       credibilityTier: credibility.tier,
+      sourceTier: eval_.sourceTier,
+      rationale: eval_.rationale,
+      contradicts: eval_.contradicts,
       flagged: credibilityScore < config.sourceCredibility.flagBelowThreshold,
       kept: eval_.relevanceScore >= evaluation.relevanceThreshold,
     };

@@ -22,6 +22,11 @@ export interface ResearchRequest {
   templateId?: string;
   configOverrides?: DeepPartial<AppConfig>;
   customModelMap?: Partial<Record<PipelineStageName, string>>;
+  customPrompts?: {
+    decomposition?: string;
+    evaluation?: string;
+    synthesis?: string;
+  };
   comparativeTopics?: string[];
   timeMachineFilter?: {
     recencyFilter?: 'day' | 'week' | 'month' | 'year';
@@ -67,8 +72,14 @@ export interface PipelineStageInfo {
 export interface SubQuery {
   id: string;
   text: string;
+  textEn?: string;
   justification: string;
   language: string;
+  priority?: 'high' | 'medium' | 'low';
+  angle?: 'conceptual' | 'historical' | 'comparative' | 'practical' | 'critical' | 'quantitative' | 'regulatory';
+  searchTerms?: string[];
+  searchTermsPt?: string[];
+  expectedSourceType?: 'academic' | 'news' | 'official' | 'technical' | 'opinion';
   status: 'pending' | 'searching' | 'completed' | 'error';
   resultCount?: number;
 }
@@ -93,9 +104,13 @@ export interface EvaluatedSource extends SearchResult {
   relevanceScore: number;   // 0-1
   recencyScore: number;     // 0-1
   authorityScore: number;   // 0-1
+  biasScore?: number;       // 0-1 (neutrality)
   weightedScore: number;    // 0-1 (combined)
   credibilityScore: number; // 0-1
   credibilityTier: 'high' | 'medium' | 'low';
+  sourceTier?: 'primary' | 'secondary' | 'tertiary';
+  rationale?: string;       // LLM justification for scores
+  contradicts?: string;     // URL of contradicting source, if any
   flagged: boolean;         // true if below flagBelowThreshold
   kept: boolean;            // true if passed relevanceThreshold
 }

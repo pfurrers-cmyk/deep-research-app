@@ -60,13 +60,27 @@ async function searchSingleQuery(
   const toolName =
     provider === 'parallel' ? 'parallelSearch' : 'perplexitySearch';
 
+  // Build enriched search prompt using bilingual terms from decomposition
+  let searchPrompt = subQuery.text;
+  if (subQuery.searchTerms?.length || subQuery.searchTermsPt?.length) {
+    const enTerms = subQuery.searchTerms?.join(', ') ?? '';
+    const ptTerms = subQuery.searchTermsPt?.join(', ') ?? '';
+    const enQuery = subQuery.textEn ?? '';
+    searchPrompt = [
+      subQuery.text,
+      enQuery && enQuery !== subQuery.text ? `\nAlso search: ${enQuery}` : '',
+      enTerms ? `\nKey terms (EN): ${enTerms}` : '',
+      ptTerms ? `\nTermos-chave (PT): ${ptTerms}` : '',
+    ].filter(Boolean).join('');
+  }
+
   const { toolResults } = await generateText({
     model: gateway(modelSelection.modelId),
     tools: {
       [toolName]: searchTool,
     },
     toolChoice: 'required',
-    prompt: subQuery.text,
+    prompt: searchPrompt,
   });
 
   const results: SearchResult[] = [];
