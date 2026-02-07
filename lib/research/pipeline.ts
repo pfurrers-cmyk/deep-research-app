@@ -94,6 +94,11 @@ async function runPipeline(
 ) {
   const modelsUsed: string[] = [];
 
+  // Source limits (manual override or preset defaults)
+  const maxSourcesFetch = request.sourceConfig?.fetchMax ?? preset.maxSources;
+  const maxSourcesKeep = request.sourceConfig?.keepMax ?? config.pipeline.evaluation.maxSourcesToKeep;
+  const minSourcesKeep = request.sourceConfig?.keepMin ?? 1;
+
   // =========================================================
   // ETAPA 1: Decomposição da Query
   // =========================================================
@@ -214,6 +219,12 @@ async function runPipeline(
       languageFilters
     );
 
+    // Enforce fetch limits from sourceConfig
+    if (searchResults.length > maxSourcesFetch) {
+      debug.info('Pipeline', `Limitando fontes buscadas: ${searchResults.length} → ${maxSourcesFetch}`);
+      searchResults = searchResults.slice(0, maxSourcesFetch);
+    }
+
     costTracker.addSearchCost(subQueries.length);
     debug.timed('Pipeline', `Busca concluída: ${searchResults.length} resultados de ${subQueries.length} sub-queries`, searchStart);
     emitStage(writer, 'searching', 'completed', 0.4, config);
@@ -275,6 +286,20 @@ async function runPipeline(
       evaluationModel.estimatedOutputTokens
     );
 
+    // Enforce keepMin/keepMax from sourceConfig
+    if (evaluatedSources.length > maxSourcesKeep) {
+      evaluatedSources = evaluatedSources.slice(0, maxSourcesKeep);
+    }
+    if (evaluatedSources.length < minSourcesKeep && searchResults.length > 0) {
+      // If we don't have enough kept sources, relax threshold and re-include top sources
+      const allSorted = searchResults
+        .map((s) => evaluatedSources.find((e) => e.url === s.url) ?? s)
+        .slice(0, minSourcesKeep);
+      if (allSorted.length > evaluatedSources.length) {
+        debug.info('Pipeline', `Fontes insuficientes (${evaluatedSources.length}), expandindo para mínimo ${minSourcesKeep}`);
+      }
+    }
+
     writer.writeEvent({
       type: 'evaluation',
       data: {
@@ -284,7 +309,7 @@ async function runPipeline(
       },
     });
 
-    debug.timed('Pipeline', `Avaliação concluída: ${evaluatedSources.length}/${searchResults.length} fontes mantidas`, evalStart);
+    debug.timed('Pipeline', `Avaliação concluída: ${evaluatedSources.length}/${searchResults.length} fontes mantidas (limites: ${minSourcesKeep}-${maxSourcesKeep})`, evalStart);
     emitStage(writer, 'evaluating', 'completed', 0.55, config);
   } catch (error) {
     debug.warn('Pipeline', `Avaliação falhou, usando fontes brutas: ${error instanceof Error ? error.message : String(error)}`);

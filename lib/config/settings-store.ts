@@ -29,6 +29,15 @@ export interface UserPreferences {
     synthesis: string;
   };
 
+  // Fontes — piso/teto de busca e seleção
+  sourceConfig: {
+    mode: 'auto' | 'manual';
+    fetchMin: number;
+    fetchMax: number;
+    keepMin: number;
+    keepMax: number;
+  };
+
   // Aparência
   defaultTheme: 'dark' | 'light' | 'system';
 
@@ -49,6 +58,13 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     decomposition: '',
     evaluation: '',
     synthesis: '',
+  },
+  sourceConfig: {
+    mode: 'auto',
+    fetchMin: 5,
+    fetchMax: 50,
+    keepMin: 3,
+    keepMax: 20,
   },
   defaultTheme: 'dark',
   updatedAt: new Date().toISOString(),
@@ -85,6 +101,10 @@ export function savePreferences(prefs: Partial<UserPreferences>): UserPreference
     customPrompts: {
       ...current.customPrompts,
       ...(prefs.customPrompts ?? {}),
+    },
+    sourceConfig: {
+      ...current.sourceConfig,
+      ...(prefs.sourceConfig ?? {}),
     },
     updatedAt: new Date().toISOString(),
   };

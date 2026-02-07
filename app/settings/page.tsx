@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [defaultTheme, setDefaultTheme] = useState<string>(prefs.defaultTheme);
   const [stageModels, setStageModels] = useState(prefs.stageModels);
   const [customPrompts, setCustomPrompts] = useState(prefs.customPrompts);
+  const [sourceConfig, setSourceConfig] = useState(prefs.sourceConfig);
 
   // Sync when loaded changes (first mount)
   const [synced, setSynced] = useState(false);
@@ -36,6 +37,7 @@ export default function SettingsPage() {
     setDefaultTheme(prefs.defaultTheme);
     setStageModels(prefs.stageModels);
     setCustomPrompts(prefs.customPrompts);
+    setSourceConfig(prefs.sourceConfig);
     setSynced(true);
   }
 
@@ -47,6 +49,7 @@ export default function SettingsPage() {
       defaultTheme: defaultTheme as 'dark' | 'light' | 'system',
       stageModels,
       customPrompts,
+      sourceConfig,
     });
     // Apply theme immediately
     setTheme(defaultTheme);
@@ -62,6 +65,7 @@ export default function SettingsPage() {
     setDefaultTheme('dark');
     setStageModels({ decomposition: 'auto', evaluation: 'auto', synthesis: 'auto' });
     setCustomPrompts({ decomposition: '', evaluation: '', synthesis: '' });
+    setSourceConfig({ mode: 'auto', fetchMin: 5, fetchMax: 50, keepMin: 3, keepMax: 20 });
     setTheme('dark');
     setSaved(false);
   };
@@ -246,6 +250,83 @@ export default function SettingsPage() {
             <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               Dica: envie os prompts padrão a uma IA externa para obter versões otimizadas, depois cole o resultado aqui.
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Fontes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fontes</CardTitle>
+            <CardDescription>
+              Controle quantas fontes são buscadas e selecionadas em cada pesquisa
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium">Modo</label>
+              <div className="flex rounded-lg border border-input">
+                <button
+                  type="button"
+                  onClick={() => setSourceConfig((s) => ({ ...s, mode: 'auto' }))}
+                  className={`px-3 py-1.5 text-sm transition-colors ${sourceConfig.mode === 'auto' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Automático
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceConfig((s) => ({ ...s, mode: 'manual' }))}
+                  className={`border-l border-input px-3 py-1.5 text-sm transition-colors ${sourceConfig.mode === 'manual' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Manual
+                </button>
+              </div>
+            </div>
+
+            {sourceConfig.mode === 'manual' && (
+              <div className="space-y-4 rounded-lg border border-border/50 bg-muted/10 p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Fontes a buscar</span>
+                    <span className="font-mono text-muted-foreground">{sourceConfig.fetchMin}–{sourceConfig.fetchMax}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-8">Mín</span>
+                    <input type="range" min={1} max={sourceConfig.fetchMax} value={sourceConfig.fetchMin}
+                      onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMin: Number(e.target.value) }))}
+                      className="flex-1 accent-primary" />
+                    <span className="text-xs text-muted-foreground w-8">Máx</span>
+                    <input type="range" min={sourceConfig.fetchMin} max={100} value={sourceConfig.fetchMax}
+                      onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMax: Number(e.target.value) }))}
+                      className="flex-1 accent-primary" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Fontes a selecionar (pós-avaliação)</span>
+                    <span className="font-mono text-muted-foreground">{sourceConfig.keepMin}–{sourceConfig.keepMax}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-8">Mín</span>
+                    <input type="range" min={1} max={sourceConfig.keepMax} value={sourceConfig.keepMin}
+                      onChange={(e) => setSourceConfig((s) => ({ ...s, keepMin: Number(e.target.value) }))}
+                      className="flex-1 accent-primary" />
+                    <span className="text-xs text-muted-foreground w-8">Máx</span>
+                    <input type="range" min={sourceConfig.keepMin} max={50} value={sourceConfig.keepMax}
+                      onChange={(e) => setSourceConfig((s) => ({ ...s, keepMax: Number(e.target.value) }))}
+                      className="flex-1 accent-primary" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  No modo manual, o pipeline respeitará os limites definidos independente da profundidade selecionada.
+                </p>
+              </div>
+            )}
+
+            {sourceConfig.mode === 'auto' && (
+              <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                No modo automático, a quantidade de fontes é determinada pela profundidade selecionada (Rápida: 8, Normal: 15, Profunda: 30, Exaustiva: 50).
+              </p>
+            )}
           </CardContent>
         </Card>
 

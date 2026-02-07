@@ -20,6 +20,7 @@ export async function POST(req: Request) {
       templateId: body.templateId,
       configOverrides: body.configOverrides,
       customModelMap: body.customModelMap,
+      sourceConfig: body.sourceConfig,
     };
 
     if (!request.query.trim()) {

@@ -189,6 +189,8 @@ class TaskManager {
       if (prefs.stageModels.evaluation !== 'auto') customModelMap.evaluation = prefs.stageModels.evaluation;
       if (prefs.stageModels.synthesis !== 'auto') customModelMap.synthesis = prefs.stageModels.synthesis;
 
+      const sourceConfig = prefs.sourceConfig?.mode === 'manual' ? prefs.sourceConfig : undefined;
+
       const res = await fetch('/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,6 +200,7 @@ class TaskManager {
           domainPreset,
           modelPreference: prefs.modelPreference,
           customModelMap: Object.keys(customModelMap).length > 0 ? customModelMap : undefined,
+          sourceConfig,
         }),
         signal: controller.signal,
       });
