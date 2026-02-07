@@ -195,7 +195,7 @@ export function FloatingLogButton() {
           </div>
 
           {/* Log entries */}
-          <div className="flex-1 overflow-y-auto bg-black/30 p-2 font-mono text-[10px] leading-relaxed">
+          <div data-select-scope="floating-logs" tabIndex={0} className="flex-1 overflow-y-auto bg-black/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none">
             {filtered.length === 0 ? (
               <p className="py-8 text-center text-xs text-muted-foreground">
                 Nenhum log registrado

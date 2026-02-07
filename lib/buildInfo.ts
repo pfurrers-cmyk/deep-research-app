@@ -1,8 +1,8 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
   version: '2.0.0',
-  buildTimestamp: '2026-02-07T15:21:03.866Z',
-  commitHash: '1de19d0',
+  buildTimestamp: '2026-02-07T15:33:03.378Z',
+  commitHash: '6806d07',
   branch: 'master',
   changelog: [
     'Sprint 1: Textarea progressivo auto-resize + config piso/teto de fontes (auto/manual)',

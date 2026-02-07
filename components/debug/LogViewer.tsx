@@ -152,7 +152,7 @@ export function LogViewer() {
         </div>
 
         {/* Log entries */}
-        <div className="max-h-80 overflow-y-auto rounded-lg border border-border bg-black/40 p-2 font-mono text-[11px] leading-relaxed">
+        <div data-select-scope="logs" tabIndex={0} className="max-h-80 overflow-y-auto rounded-lg border border-border bg-black/40 p-2 font-mono text-[11px] leading-relaxed focus:outline-none">
           {filtered.length === 0 ? (
             <p className="py-4 text-center text-xs text-muted-foreground">
               Nenhum log registrado

@@ -304,7 +304,7 @@ export default function Home() {
 
         {/* Follow-up Chat */}
         {isComplete && research.response && (
-          <div className="w-full space-y-4 rounded-xl border border-border bg-card p-4">
+          <div data-select-scope="followup" tabIndex={0} className="w-full space-y-4 rounded-xl border border-border bg-card p-4 focus:outline-none">
             <h3 className="text-sm font-semibold text-muted-foreground">
               Perguntas de Follow-up
             </h3>
