@@ -1,7 +1,6 @@
 ﻿param(
     [Parameter(Mandatory=$true)][string]$CommitMessage,
-    [switch]$SkipTests,
-    [switch]$SkipAgentReview
+    [switch]$SkipTests
 )
 $ErrorActionPreference = "Continue"
 Set-Location $PSScriptRoot
@@ -10,8 +9,10 @@ $DeployBranch = "deploy/auto-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $BuildInfoPath = "lib/buildInfo.ts"
 $MaxWaitSeconds = 300
 $PollIntervalSeconds = 5
-# Checks que nunca bloqueiam merge (CI jobs que so rodam em master push)
-$AlwaysAdvisory = @("e2e-tests", "llm-evals")
+# Checks advisory (nao bloqueiam merge):
+# - Vercel Agent Review: review acontece no Vercel Dashboard mas o GitHub check fica IN_PROGRESS para sempre (Beta)
+# - e2e-tests/llm-evals: so rodam em push to master, nao em PRs
+$AlwaysAdvisory = @("Vercel Agent Review", "e2e-tests", "llm-evals")
 
 Write-Host "`n========================================"  -ForegroundColor Cyan
 Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
@@ -102,9 +103,7 @@ if ($ghOk) {
 $deployResult = "DIRECT_MERGE"
 if ($prUrl) {
     Write-Host "[7/8] Aguardando checks (timeout ${MaxWaitSeconds}s)..."  -ForegroundColor Yellow
-    if ($SkipAgentReview) {
-        Write-Host "  NOTA: Agent Review tratado como advisory (-SkipAgentReview)"  -ForegroundColor DarkYellow
-    }
+    Write-Host "  NOTA: Agent Review eh advisory (review acontece no Vercel Dashboard, check GH fica IN_PROGRESS)"  -ForegroundColor DarkGray
     $elapsed = 0
     $deployResult = "TIMEOUT"
     while ($elapsed -lt $MaxWaitSeconds) {
@@ -122,17 +121,12 @@ if ($prUrl) {
             continue
         }
 
-        # Build advisory list: always-advisory + conditionally Agent Review
-        $advisoryNames = [System.Collections.ArrayList]@($AlwaysAdvisory)
-        if ($SkipAgentReview) { $advisoryNames.Add("Vercel Agent Review") | Out-Null }
-
-        # Classify checks
-        $blocking = @($checksArr | Where-Object { $advisoryNames -notcontains $_.name })
-        $advisory = @($checksArr | Where-Object { $advisoryNames -contains $_.name })
+        # Classify checks: blocking vs advisory
+        $blocking = @($checksArr | Where-Object { $AlwaysAdvisory -notcontains $_.name })
+        $advisory = @($checksArr | Where-Object { $AlwaysAdvisory -contains $_.name })
 
         $blockingOk = @($blocking | Where-Object { $_.state -eq "SUCCESS" -or $_.state -eq "NEUTRAL" }).Count
         $blockingFail = @($blocking | Where-Object { $_.state -eq "FAILURE" -or $_.state -eq "ERROR" })
-        $blockingPending = @($blocking | Where-Object { $_.state -eq "PENDING" -or $_.state -eq "IN_PROGRESS" })
 
         $advisoryStr = ($advisory | ForEach-Object { "$($_.name):$($_.state)" }) -join ", "
         $allStr = ($checksArr | ForEach-Object { "$($_.name):$($_.state)" }) -join " | "
@@ -183,16 +177,6 @@ if ($prUrl) {
             break
         }
 
-        # After 300s, if only Agent Review is pending, allow merge (timeout fallback)
-        if ($elapsed -ge $MaxWaitSeconds -and $blockingPending.Count -eq 1) {
-            $pendName = $blockingPending[0].name
-            if ($pendName -eq "Vercel Agent Review") {
-                $deployResult = "AGENT_TIMEOUT"
-                Write-Host ""
-                Write-Host "  Agent Review: timeout (${MaxWaitSeconds}s) - procedendo com merge"  -ForegroundColor DarkYellow
-                break
-            }
-        }
     }
 
     if ($deployResult -eq "TIMEOUT") {
