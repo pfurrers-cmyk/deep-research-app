@@ -41,7 +41,8 @@ export function ExportModal({ open, onClose, reportText, query, citations, metad
 
     try {
       const input: ExportInput = { reportText, query, citations, metadata };
-      const result = exportReport(selectedFormat, input);
+      const rawResult = exportReport(selectedFormat, input);
+      const result = rawResult instanceof Promise ? await rawResult : rawResult;
 
       // Download file
       const blob = result.blob ?? new Blob([result.content], { type: result.mimeType });
@@ -71,7 +72,8 @@ export function ExportModal({ open, onClose, reportText, query, citations, metad
   const handleCopyToClipboard = useCallback(async () => {
     try {
       const input: ExportInput = { reportText, query, citations, metadata };
-      const result = exportReport(selectedFormat, input);
+      const rawResult = exportReport(selectedFormat, input);
+      const result = rawResult instanceof Promise ? await rawResult : rawResult;
       await navigator.clipboard.writeText(result.content);
       toast.success('Copiado para a área de transferência');
     } catch {

@@ -103,7 +103,7 @@ export function estimatePipelineCost(
 
   // Etapa 5: Síntese — input = all sources context, output = report
   const synthesisInputTokens = preset.maxSources * 1500 + 1000;
-  const synthesisOutputTokens = config.pipeline.synthesis.maxOutputTokens;
+  const synthesisOutputTokens = 16000; // Estimativa para cálculo de custo — sem limite real no runtime
   stages.push({
     stage: 'synthesis',
     modelId: preset.synthesisModel,

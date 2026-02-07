@@ -276,7 +276,15 @@ export type PipelineEvent =
   | MetadataEvent
   | CompleteEvent
   | ErrorEvent
-  | ProcessingModeEvent;
+  | ProcessingModeEvent
+  | SectionProgressEvent;
+
+export interface SectionProgressEvent {
+  type: 'section-progress';
+  sectionId: string;
+  status: 'pending' | 'generating' | 'complete' | 'error';
+  progress?: number;
+}
 
 export interface ProcessingModeEvent {
   type: 'processing-mode';

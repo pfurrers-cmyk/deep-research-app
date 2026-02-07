@@ -14,12 +14,19 @@ interface StageInfo {
   message: string;
 }
 
+interface SectionProgressInfo {
+  sectionId: string;
+  status: 'pending' | 'generating' | 'complete' | 'error';
+  progress?: number;
+}
+
 interface ResearchProgressProps {
   currentStage: StageInfo | null;
   subQueries: SubQuery[];
   sourcesFound: number;
   sourcesKept: number;
   costUSD: number;
+  sectionProgress?: SectionProgressInfo[];
 }
 
 const PIPELINE_STAGES = [
@@ -69,6 +76,7 @@ export function ResearchProgress({
   sourcesFound,
   sourcesKept,
   costUSD,
+  sectionProgress,
 }: ResearchProgressProps) {
   const [isOpen, setIsOpen] = useState(true);
   const { strings } = APP_CONFIG;
@@ -176,6 +184,24 @@ export function ResearchProgress({
                 {subQueries.map((sq) => (
                   <div key={sq.id} className="text-muted-foreground/70">
                     <span className="text-primary/50">›</span> {sq.text}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Section progress (multi-section synthesis) */}
+            {sectionProgress && sectionProgress.length > 0 && (
+              <div className="pl-[26px] space-y-0.5 mt-2">
+                <div className="text-[10px] font-medium text-muted-foreground mb-1">Seções do relatório:</div>
+                {sectionProgress.map((sp) => (
+                  <div key={sp.sectionId} className="flex items-center gap-1.5 text-muted-foreground/80">
+                    {sp.status === 'complete' && <span className="text-green-500 text-[10px]">✓</span>}
+                    {sp.status === 'generating' && <Loader2 className="w-2.5 h-2.5 text-primary animate-spin" />}
+                    {sp.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 inline-block" />}
+                    {sp.status === 'error' && <span className="text-destructive text-[10px]">✗</span>}
+                    <span className={cn('text-[11px]', sp.status === 'generating' && 'text-primary font-medium')}>
+                      {sp.sectionId === '_outline' ? 'Gerando outline...' : sp.sectionId.replace(/_/g, ' ')}
+                    </span>
                   </div>
                 ))}
               </div>

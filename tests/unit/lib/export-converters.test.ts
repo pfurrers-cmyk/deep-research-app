@@ -95,17 +95,19 @@ describe('Export Converters', () => {
   })
 
   describe('exportReport (master)', () => {
-    it('roteia para o converter correto', () => {
-      expect(exportReport('markdown', sampleInput).mimeType).toBe('text/markdown')
-      expect(exportReport('pdf', sampleInput).mimeType).toBe('text/html')
-      expect(exportReport('slides', sampleInput).mimeType).toBe('text/html')
-      expect(exportReport('podcast', sampleInput).mimeType).toBe('text/markdown')
-      expect(exportReport('social', sampleInput).mimeType).toBe('text/plain')
-      expect(exportReport('json', sampleInput).mimeType).toBe('application/json')
+    it('roteia para o converter correto', async () => {
+      const resolve = async (r: ReturnType<typeof exportReport>) => r instanceof Promise ? await r : r;
+      expect((await resolve(exportReport('markdown', sampleInput))).mimeType).toBe('text/markdown')
+      expect((await resolve(exportReport('pdf', sampleInput))).mimeType).toBe('text/html')
+      expect((await resolve(exportReport('slides', sampleInput))).mimeType).toBe('text/html')
+      expect((await resolve(exportReport('podcast', sampleInput))).mimeType).toBe('text/markdown')
+      expect((await resolve(exportReport('social', sampleInput))).mimeType).toBe('text/plain')
+      expect((await resolve(exportReport('json', sampleInput))).mimeType).toBe('application/json')
     })
 
-    it('fallback para markdown quando formato desconhecido', () => {
-      const result = exportReport('xyz', sampleInput)
+    it('fallback para markdown quando formato desconhecido', async () => {
+      const raw = exportReport('xyz', sampleInput)
+      const result = raw instanceof Promise ? await raw : raw;
       expect(result.mimeType).toBe('text/markdown')
     })
   })

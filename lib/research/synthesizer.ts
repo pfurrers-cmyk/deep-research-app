@@ -7,6 +7,7 @@ import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
 import { loadPreferences } from '@/lib/config/settings-store';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
+import { shouldUseMultiSection, synthesizeBySection, type SectionProgress } from '@/lib/research/section-synthesizer';
 
 export async function synthesizeReport(
   query: string,
@@ -14,11 +15,18 @@ export async function synthesizeReport(
   depth: DepthPreset,
   config: AppConfig,
   onTextDelta?: (delta: string) => void,
-  attachments?: ResearchAttachment[]
+  attachments?: ResearchAttachment[],
+  onSectionProgress?: (progress: SectionProgress) => void,
 ): Promise<string> {
   const prefs = loadPreferences();
+
+  // Check if multi-section synthesis should be used
+  if (shouldUseMultiSection(prefs.pro.researchMode, prefs.pro.detailLevel, sources.length)) {
+    return synthesizeBySection(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
+  }
+
   const modelSelection = selectModel('synthesis', 'auto', depth, config);
-  const { system, prompt: basePrompt } = buildSynthesisPrompt(query, sources, config, undefined, prefs.pro);
+  const { system, prompt: basePrompt } = buildSynthesisPrompt(query, sources, config, undefined, prefs.pro, prefs.tcc);
 
   // Inject attachment context into the prompt
   let prompt = basePrompt;
@@ -57,7 +65,7 @@ export async function synthesizeReport(
         model: gateway(modelId),
         system,
         prompt,
-        maxOutputTokens: config.pipeline.synthesis.maxOutputTokens,
+        // Sem maxOutputTokens — o modelo gera até seu máximo nativo
         abortSignal: AbortSignal.timeout(
           config.resilience.timeoutPerStageMs.synthesis
         ),
@@ -67,6 +75,14 @@ export async function synthesizeReport(
       for await (const delta of result.textStream) {
         fullText += delta;
         onTextDelta?.(delta);
+      }
+
+      // Detectar truncamento: se o modelo parou por limite de tokens, avisar o usuário
+      const resultFinishReason = await result.finishReason;
+      if (resultFinishReason === 'length') {
+        const warning = '\n\n---\n⚠️ **AVISO**: O relatório foi truncado pelo limite de tokens do modelo. Considere usar um modelo com maior capacidade de output ou reduzir o escopo da pesquisa.\n';
+        fullText += warning;
+        onTextDelta?.(warning);
       }
 
       return fullText;

@@ -58,6 +58,19 @@ export interface UserPreferences {
     exportFormat: string;
   };
 
+  // TCC — Modo Trabalho de Conclusão de Curso
+  tcc: {
+    titulo: string;
+    autor: string;
+    instituicao: string;
+    curso: string;
+    orientador: string;
+    cidade: string;
+    ano: string;
+    minFontes: number;
+    enabledSections: string[];
+  };
+
   // Chat
   defaultChatModel: string;
   chatSystemPrompt: string;
@@ -108,6 +121,17 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     },
     exportFormat: 'markdown',
   },
+  tcc: {
+    titulo: '',
+    autor: '',
+    instituicao: '',
+    curso: '',
+    orientador: '',
+    cidade: '',
+    ano: new Date().getFullYear().toString(),
+    minFontes: 15,
+    enabledSections: ['capa', 'folha_rosto', 'resumo', 'abstract', 'sumario', 'introducao', 'referencial_teorico', 'metodologia', 'resultados', 'conclusao', 'referencias'],
+  },
   defaultChatModel: 'openai/gpt-4.1-mini',
   chatSystemPrompt: '',
   defaultTheme: 'dark',
@@ -157,6 +181,10 @@ export function savePreferences(prefs: Partial<UserPreferences>): UserPreference
         ...current.pro.advancedFilters,
         ...(prefs.pro?.advancedFilters ?? {}),
       },
+    },
+    tcc: {
+      ...current.tcc,
+      ...(prefs.tcc ?? {}),
     },
     updatedAt: new Date().toISOString(),
   };

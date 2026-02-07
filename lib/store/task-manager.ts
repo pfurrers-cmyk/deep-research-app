@@ -30,6 +30,12 @@ export interface StageInfo {
   message: string;
 }
 
+export interface SectionProgressInfo {
+  sectionId: string;
+  status: 'pending' | 'generating' | 'complete' | 'error';
+  progress?: number;
+}
+
 export interface ResearchTaskState {
   status: TaskStatus;
   currentStage: StageInfo | null;
@@ -42,6 +48,7 @@ export interface ResearchTaskState {
   response: ResearchResponse | null;
   error: string | null;
   lastQuery: { query: string; depth: string; domain: string | null } | null;
+  sectionProgress: SectionProgressInfo[];
 }
 
 export interface GenerateTaskState {
@@ -69,6 +76,7 @@ const DEFAULT_RESEARCH: ResearchTaskState = {
   response: null,
   error: null,
   lastQuery: null,
+  sectionProgress: [],
 };
 
 const DEFAULT_GENERATE: GenerateTaskState = {
@@ -331,6 +339,17 @@ class TaskManager {
         this._research = { ...r, response: event.data, status: 'complete' };
         this._autoSaveResearch(event.data);
         break;
+
+      case 'section-progress': {
+        const existing = r.sectionProgress ?? [];
+        const idx = existing.findIndex((s) => s.sectionId === event.sectionId);
+        const entry: SectionProgressInfo = { sectionId: event.sectionId, status: event.status, progress: event.progress };
+        const updated = idx >= 0
+          ? existing.map((s, i) => (i === idx ? entry : s))
+          : [...existing, entry];
+        this._research = { ...r, sectionProgress: updated };
+        break;
+      }
 
       case 'processing-mode':
         this._research = {

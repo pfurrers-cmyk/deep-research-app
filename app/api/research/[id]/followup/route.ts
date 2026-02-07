@@ -55,8 +55,8 @@ ${sourcesContext ? `## FONTES DISPONÍVEIS:\n${sourcesContext.slice(0, 5000)}` :
       model: gateway(modelId),
       system: systemPrompt,
       messages,
-      maxOutputTokens: 4000,
-      abortSignal: AbortSignal.timeout(60_000),
+      // Sem maxOutputTokens — sem limite artificial
+      abortSignal: AbortSignal.timeout(120_000),
       providerOptions: getSafetyProviderOptions(modelId) as never,
     });
 

@@ -27,6 +27,7 @@ interface UseResearchReturn {
   costUSD: number;
   response: ResearchTaskState['response'];
   error: string | null;
+  sectionProgress: ResearchTaskState['sectionProgress'];
 }
 
 export function useResearch(): UseResearchReturn {
@@ -60,5 +61,6 @@ export function useResearch(): UseResearchReturn {
     costUSD: state.costUSD,
     response: state.response,
     error: state.error,
+    sectionProgress: state.sectionProgress,
   };
 }

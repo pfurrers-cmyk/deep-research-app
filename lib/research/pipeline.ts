@@ -390,7 +390,10 @@ async function runPipeline(
         (delta) => {
           writer.writeEvent({ type: 'text-delta', text: delta });
         },
-        request.attachments
+        request.attachments,
+        (progress) => {
+          writer.writeEvent({ type: 'section-progress', ...progress });
+        }
       );
 
       costTracker.addEntry(
