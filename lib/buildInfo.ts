@@ -1,8 +1,8 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
   version: '2.0.1',
-  buildTimestamp: '2026-02-07T15:39:32.676Z',
-  commitHash: 'b3e3b2c',
+  buildTimestamp: '2026-02-07T15:46:19.573Z',
+  commitHash: '463a04d',
   branch: 'master',
   changelog: [
     'Fix: modelo inexistente google/imagen-4.0-fast-generate-001 removido do catálogo',

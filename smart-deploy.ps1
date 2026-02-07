@@ -10,9 +10,8 @@ $BuildInfoPath = "lib/buildInfo.ts"
 $MaxWaitSeconds = 300
 $PollIntervalSeconds = 5
 # Checks advisory (nao bloqueiam merge):
-# - Vercel Agent Review: review acontece no Vercel Dashboard mas o GitHub check fica IN_PROGRESS para sempre (Beta)
-# - e2e-tests/llm-evals: so rodam em push to master, nao em PRs
-$AlwaysAdvisory = @("Vercel Agent Review", "e2e-tests", "llm-evals")
+# - e2e-tests/llm-evals: usam continue-on-error, podem falhar sem bloquear
+$AlwaysAdvisory = @("e2e-tests", "llm-evals")
 
 Write-Host "`n========================================"  -ForegroundColor Cyan
 Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
@@ -103,7 +102,7 @@ if ($ghOk) {
 $deployResult = "DIRECT_MERGE"
 if ($prUrl) {
     Write-Host "[7/8] Aguardando checks (timeout ${MaxWaitSeconds}s)..."  -ForegroundColor Yellow
-    Write-Host "  NOTA: Agent Review eh advisory (review acontece no Vercel Dashboard, check GH fica IN_PROGRESS)"  -ForegroundColor DarkGray
+    Write-Host "  NOTA: e2e-tests e llm-evals sao advisory (continue-on-error)"  -ForegroundColor DarkGray
     $elapsed = 0
     $deployResult = "TIMEOUT"
     while ($elapsed -lt $MaxWaitSeconds) {
@@ -131,35 +130,17 @@ if ($prUrl) {
         $advisoryStr = ($advisory | ForEach-Object { "$($_.name):$($_.state)" }) -join ", "
         $allStr = ($checksArr | ForEach-Object { "$($_.name):$($_.state)" }) -join " | "
 
-        # Agent Review status for display
-        $agentCheck = $checksArr | Where-Object { $_.name -eq "Vercel Agent Review" }
-        $agentState = if ($agentCheck) { $agentCheck.state } else { "N/A" }
-        $agentIcon = switch ($agentState) {
-            "SUCCESS" { "[OK]" }
-            "FAILURE" { "[X]" }
-            "IN_PROGRESS" { "[...]" }
-            default { "[-]" }
-        }
-
-        Write-Host "  -> [${elapsed}s] Blocking:$blockingOk/$($blocking.Count) | Agent:$agentIcon $agentState | $allStr"  -ForegroundColor Gray
+        Write-Host "  -> [${elapsed}s] Blocking:$blockingOk/$($blocking.Count) | $allStr"  -ForegroundColor Gray
 
         # Check for failures
         if ($blockingFail.Count -gt 0) {
-            # Special case: if ONLY Agent Review failed, show warning but don't block
-            $nonAgentFail = @($blockingFail | Where-Object { $_.name -ne "Vercel Agent Review" })
-            $agentFailed = @($blockingFail | Where-Object { $_.name -eq "Vercel Agent Review" })
-            if ($nonAgentFail.Count -gt 0) {
-                $deployResult = "CHECK_FAILED"
-                Write-Host ""
-                Write-Host "  CHECK FAILED"  -ForegroundColor Red
-                foreach ($f in $blockingFail) {
-                    Write-Host "    X $($f.name): $($f.description)"  -ForegroundColor Red
-                }
-                break
+            $deployResult = "CHECK_FAILED"
+            Write-Host ""
+            Write-Host "  CHECK FAILED"  -ForegroundColor Red
+            foreach ($f in $blockingFail) {
+                Write-Host "    X $($f.name): $($f.description)"  -ForegroundColor Red
             }
-            if ($agentFailed.Count -gt 0) {
-                Write-Host "  -> Agent Review reportou problemas (review comments posted)"  -ForegroundColor DarkYellow
-            }
+            break
         }
 
         # Check if all blocking passed
