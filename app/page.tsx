@@ -178,12 +178,6 @@ export default function Home() {
               Ferramenta pessoal de pesquisa profunda automatizada com busca,
               análise, síntese e relatório estruturado com fontes citadas.
             </p>
-            <p className="text-xs text-muted-foreground/60">
-              Atalhos: <kbd className="rounded border px-1">/</kbd> Focar busca ·{' '}
-              <kbd className="rounded border px-1">Ctrl+N</kbd> Nova pesquisa ·{' '}
-              <kbd className="rounded border px-1">Ctrl+H</kbd> Biblioteca ·{' '}
-              <kbd className="rounded border px-1">Ctrl+,</kbd> Config
-            </p>
           </div>
         )}
 
