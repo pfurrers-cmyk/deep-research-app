@@ -158,11 +158,14 @@ export function LogViewer() {
               Nenhum log registrado
             </p>
           ) : (
-            [...filtered].reverse().map((entry, i) => (
+            filtered.map((entry, i) => (
               <div key={i} className="border-b border-border/30 py-1 last:border-0">
                 <div className="flex items-start gap-2">
+                  <span className="shrink-0 text-muted-foreground/40">
+                    {i + 1}
+                  </span>
                   <span className="shrink-0 text-muted-foreground/60">
-                    {entry.timestamp.slice(11, 23)}
+                    {entry.timestamp}
                   </span>
                   <span className={`shrink-0 font-bold ${LEVEL_COLORS[entry.level] ?? ''}`}>
                     {entry.level.padEnd(5)}
