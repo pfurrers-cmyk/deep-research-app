@@ -185,9 +185,18 @@ class TaskManager {
     try {
       const prefs = loadPreferences();
       const customModelMap: Record<string, string> = {};
-      if (prefs.stageModels.decomposition !== 'auto') customModelMap.decomposition = prefs.stageModels.decomposition;
-      if (prefs.stageModels.evaluation !== 'auto') customModelMap.evaluation = prefs.stageModels.evaluation;
-      if (prefs.stageModels.synthesis !== 'auto') customModelMap.synthesis = prefs.stageModels.synthesis;
+      // Check for AI-recommended models from sessionStorage (set by ModelRecommendationModal)
+      const recommendedModels = typeof sessionStorage !== 'undefined'
+        ? (() => { try { const v = sessionStorage.getItem('__recommended_models'); sessionStorage.removeItem('__recommended_models'); return v ? JSON.parse(v) : null; } catch { return null; } })()
+        : null;
+      if (recommendedModels) {
+        Object.assign(customModelMap, recommendedModels);
+        debug.info('TaskManager', `Usando modelos recomendados por IA: ${JSON.stringify(recommendedModels)}`);
+      } else {
+        if (prefs.stageModels.decomposition !== 'auto') customModelMap.decomposition = prefs.stageModels.decomposition;
+        if (prefs.stageModels.evaluation !== 'auto') customModelMap.evaluation = prefs.stageModels.evaluation;
+        if (prefs.stageModels.synthesis !== 'auto') customModelMap.synthesis = prefs.stageModels.synthesis;
+      }
 
       const sourceConfig = prefs.sourceConfig?.mode === 'manual' ? prefs.sourceConfig : undefined;
 

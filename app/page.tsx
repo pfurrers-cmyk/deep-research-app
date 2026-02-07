@@ -11,6 +11,7 @@ import { saveResearch, updateFollowUpMessages, type StoredResearch } from '@/lib
 import { ResearchInput } from '@/components/research/ResearchInput';
 import { ResearchProgress } from '@/components/research/ResearchProgress';
 import { ReportViewer } from '@/components/research/ReportViewer';
+import { ModelRecommendationModal } from '@/components/research/ModelRecommendationModal';
 import { CostEstimator } from '@/components/ui/cost-estimator';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ export default function Home() {
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [lastQuery, setLastQuery] = useState<{ query: string; depth: string; domain: string | null }>({ query: '', depth: 'normal', domain: null });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<{ query: string; depth: Parameters<typeof research.execute>[1]; domain: Parameters<typeof research.execute>[2] } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isIdle = research.status === 'idle';
@@ -36,10 +39,27 @@ export default function Home() {
   const isError = research.status === 'error';
 
   const handleSubmit = (query: string, depth: Parameters<typeof research.execute>[1], domainPreset: Parameters<typeof research.execute>[2]) => {
-    research.execute(query, depth, domainPreset);
-    setLastQuery({ query, depth, domain: domainPreset ?? null });
+    // Show recommendation modal before executing
+    setPendingSubmit({ query, depth, domain: domainPreset });
+    setShowRecommendation(true);
+  };
+
+  const executeResearch = (customModelMap?: Record<string, string>) => {
+    if (!pendingSubmit) return;
+    const { query, depth, domain } = pendingSubmit;
+    // If custom models selected from recommendation, store them temporarily
+    if (customModelMap && Object.keys(customModelMap).length > 0) {
+      // Save to sessionStorage for TaskManager to pick up
+      sessionStorage.setItem('__recommended_models', JSON.stringify(customModelMap));
+    } else {
+      sessionStorage.removeItem('__recommended_models');
+    }
+    research.execute(query, depth, domain);
+    setLastQuery({ query, depth, domain: domain ?? null });
     setFollowUpMessages([]);
     dispatch({ type: 'SET_RESEARCH', payload: { savedToDb: false } });
+    setShowRecommendation(false);
+    setPendingSubmit(null);
   };
 
   const handleRetry = () => {
@@ -193,6 +213,17 @@ export default function Home() {
             </p>
           </div>
         )}
+
+        {/* Model Recommendation Modal */}
+        <ModelRecommendationModal
+          open={showRecommendation}
+          onClose={() => { setShowRecommendation(false); setPendingSubmit(null); }}
+          onSelect={(models) => executeResearch(models)}
+          onSkip={() => executeResearch()}
+          prompt={pendingSubmit?.query ?? ''}
+          depth={pendingSubmit?.depth ?? 'normal'}
+          domain={pendingSubmit?.domain ?? null}
+        />
 
         {/* Reset confirmation modal */}
         {showResetConfirm && (
