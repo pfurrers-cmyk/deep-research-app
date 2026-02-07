@@ -1,9 +1,10 @@
-// components/research/ResearchInput.tsx — Input principal com seletor de profundidade
+// components/research/ResearchInput.tsx — Input principal com progressive disclosure
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Search, Loader2, BookTemplate } from 'lucide-react';
+import { Search, Loader2, SlidersHorizontal, BookTemplate } from 'lucide-react';
 import { APP_CONFIG, type DepthPreset, type DomainPreset } from '@/config/defaults';
+import { cn } from '@/lib/utils';
 
 interface ResearchInputProps {
   onSubmit: (query: string, depth: DepthPreset, domainPreset: DomainPreset | null) => void;
@@ -16,6 +17,7 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   const [query, setQuery] = useState('');
   const [depth, setDepth] = useState<DepthPreset>(initialDepth);
   const [domainPreset, setDomainPreset] = useState<DomainPreset | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const { strings, depth: depthConfig, domainPresets, templates } = APP_CONFIG;
 
@@ -25,27 +27,56 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
     onSubmit(query.trim(), depth, domainPreset);
   };
 
+  const handleInputChange = (value: string) => {
+    setQuery(value);
+    if (value === '/') {
+      setShowConfig(true);
+      setQuery('');
+    }
+  };
+
   const presetEntries = Object.entries(depthConfig.presets) as [DepthPreset, typeof depthConfig.presets[DepthPreset]][];
 
   const domainEntries = Object.entries(domainPresets).filter(
     ([key]) => key !== '_custom'
   ) as [DomainPreset, { label: string; icon: string; description: string }][];
 
+  const selectedPreset = depthConfig.presets[depth];
+  const hasCustomConfig = depth !== 'normal' || domainPreset !== null;
+
   return (
-    <div className="w-full space-y-4">
+    <search role="search" className="w-full space-y-3">
       <form onSubmit={handleSubmit}>
-        <div className="relative">
+        <div className="relative group">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <label htmlFor="research-input" className="sr-only">Campo de pesquisa</label>
           <input
-            type="text"
+            id="research-input"
+            type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             placeholder={strings.placeholders.queryInput}
             disabled={isLoading}
-            className="h-14 w-full rounded-xl border border-input bg-card pl-12 pr-32 text-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-14 w-full rounded-xl border border-input bg-card pl-12 pr-36 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
             autoFocus
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {!isLoading && query.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowConfig(!showConfig)}
+                className={cn(
+                  'p-2 rounded-lg transition-colors',
+                  showConfig || hasCustomConfig
+                    ? 'bg-primary/10 text-primary'
+                    : 'hover:bg-muted text-muted-foreground'
+                )}
+                aria-label="Configurar pesquisa"
+                aria-expanded={showConfig}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            )}
             {isLoading ? (
               <button
                 type="button"
@@ -61,7 +92,6 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
                 disabled={!query.trim()}
                 className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Search className="h-4 w-4" />
                 {strings.buttons.startResearch}
               </button>
             )}
@@ -69,106 +99,136 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
         </div>
       </form>
 
-      {/* Depth Selector */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">
-          {strings.labels.depth}
-        </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {presetEntries.map(([key, preset]) => (
-            <button
-              key={key}
-              onClick={() => setDepth(key)}
-              disabled={isLoading}
-              className={`flex flex-col items-center gap-1 rounded-lg border p-3 transition-all ${
-                depth === key
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
-              } disabled:cursor-not-allowed disabled:opacity-50`}
-            >
-              <span className="text-xl">{preset.icon}</span>
-              <span className="text-sm font-medium">{preset.label}</span>
-              <span className="text-xs opacity-70">
-                ~{preset.estimatedTimeSeconds < 60
-                  ? `${preset.estimatedTimeSeconds}s`
-                  : `${Math.round(preset.estimatedTimeSeconds / 60)}min`}
-                {' · '}
-                ${preset.estimatedCostUSD < 0.01
-                  ? '<0.01'
-                  : preset.estimatedCostUSD.toFixed(2)}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Domain Presets */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">
-          {strings.labels.domain}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setDomainPreset(null)}
-            disabled={isLoading}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all ${
-              domainPreset === null
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-            } disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            🌐 Geral
-          </button>
-          {domainEntries.map(([key, preset]) => (
-            <button
-              key={key}
-              onClick={() => setDomainPreset(key)}
-              disabled={isLoading}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all ${
-                domainPreset === key
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-              } disabled:cursor-not-allowed disabled:opacity-50`}
-            >
-              {preset.icon} {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Templates */}
-      <div className="space-y-2">
+      {/* Config summary (when collapsed but has custom config) */}
+      {!showConfig && hasCustomConfig && !isLoading && (
         <button
-          onClick={() => setShowTemplates(!showTemplates)}
-          className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setShowConfig(true)}
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <BookTemplate className="h-4 w-4" />
-          Templates de Pesquisa
-          <span className="text-xs">({templates.builtIn.length})</span>
+          <span>{selectedPreset.icon} {selectedPreset.label}</span>
+          {domainPreset && domainEntries.find(([k]) => k === domainPreset) && (
+            <>
+              <span className="text-border">·</span>
+              <span>{domainEntries.find(([k]) => k === domainPreset)?.[1].icon} {domainEntries.find(([k]) => k === domainPreset)?.[1].label}</span>
+            </>
+          )}
+          <span className="text-border">·</span>
+          <span className="text-primary/70">editar</span>
         </button>
-        {showTemplates && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {templates.builtIn.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setQuery(t.template);
-                  setDepth(t.depth);
-                  if (t.domainPreset) {
-                    setDomainPreset(t.domainPreset as DomainPreset);
-                  }
-                  setShowTemplates(false);
-                }}
-                disabled={isLoading}
-                className="flex flex-col items-start gap-0.5 rounded-lg border border-border p-3 text-left transition-all hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="text-sm font-medium">{t.label}</span>
-                <span className="text-xs text-muted-foreground">{t.template}</span>
-              </button>
-            ))}
+      )}
+
+      {/* Progressive disclosure — config panel */}
+      {showConfig && !isLoading && (
+        <div className="overflow-hidden rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
+          {/* Depth Selector */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              {strings.labels.depth}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {presetEntries.map(([key, preset]) => (
+                <button
+                  key={key}
+                  onClick={() => setDepth(key)}
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-lg border p-3 transition-all',
+                    depth === key
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  )}
+                >
+                  <span className="text-xl">{preset.icon}</span>
+                  <span className="text-sm font-medium">{preset.label}</span>
+                  <span className="text-xs opacity-70">
+                    ~{preset.estimatedTimeSeconds < 60
+                      ? `${preset.estimatedTimeSeconds}s`
+                      : `${Math.round(preset.estimatedTimeSeconds / 60)}min`}
+                    {' · '}
+                    ${preset.estimatedCostUSD < 0.01
+                      ? '<0.01'
+                      : preset.estimatedCostUSD.toFixed(2)}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-    </div>
+
+          {/* Domain Presets */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              {strings.labels.domain}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setDomainPreset(null)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all',
+                  domainPreset === null
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                )}
+              >
+                🌐 Geral
+              </button>
+              {domainEntries.map(([key, preset]) => (
+                <button
+                  key={key}
+                  onClick={() => setDomainPreset(key)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all',
+                    domainPreset === key
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  )}
+                >
+                  {preset.icon} {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Templates */}
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowTemplates(!showTemplates)}
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              <BookTemplate className="h-4 w-4" />
+              Templates de Pesquisa
+              <span className="text-xs">({templates.builtIn.length})</span>
+            </button>
+            {showTemplates && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {templates.builtIn.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setQuery(t.template);
+                      setDepth(t.depth);
+                      if (t.domainPreset) {
+                        setDomainPreset(t.domainPreset as DomainPreset);
+                      }
+                      setShowTemplates(false);
+                      setShowConfig(false);
+                    }}
+                    className="flex flex-col items-start gap-0.5 rounded-lg border border-border p-3 text-left transition-all hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <span className="text-sm font-medium">{t.label}</span>
+                    <span className="text-xs text-muted-foreground">{t.template}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hint for "/" shortcut (only when idle and no query) */}
+      {!query && !isLoading && !showConfig && (
+        <p className="text-center text-xs text-muted-foreground/50">
+          Digite <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]">/</kbd> para configurar profundidade e domínio
+        </p>
+      )}
+    </search>
   );
 }
