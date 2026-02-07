@@ -292,6 +292,7 @@ export const MODELS: ModelDefinition[] = [
   // OpenAI legacy
   // ================================================================
   m('openai/gpt-3.5-turbo', 16_000, 4_000, '0.4s', '—', 0.50, 1.50, 'budget', ['text']),
+  m('openai/gpt-3.5-turbo-instruct', 8_000, 4_000, '—', '—', 1.50, 2.00, 'budget', ['text']),
 
   // ================================================================
   // EMBEDDINGS (não streaming, para referência)

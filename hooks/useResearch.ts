@@ -30,6 +30,7 @@ interface UseResearchReturn {
     domainPreset?: DomainPreset | null
   ) => void;
   cancel: () => void;
+  reset: () => void;
   status: ResearchStatus;
   currentStage: StageInfo | null;
   subQueries: SubQuery[];
@@ -59,6 +60,21 @@ export function useResearch(): UseResearchReturn {
     abortRef.current?.abort();
     abortRef.current = null;
     setStatus('idle');
+  }, []);
+
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus('idle');
+    setCurrentStage(null);
+    setSubQueries([]);
+    setSourcesFound(0);
+    setSourcesKept(0);
+    setReportText('');
+    setMetadata(null);
+    setCostUSD(0);
+    setResponse(null);
+    setError(null);
   }, []);
 
   const execute = useCallback(
@@ -272,6 +288,7 @@ export function useResearch(): UseResearchReturn {
   return {
     execute,
     cancel,
+    reset,
     status,
     currentStage,
     subQueries,

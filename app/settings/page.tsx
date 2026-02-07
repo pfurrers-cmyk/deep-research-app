@@ -5,10 +5,12 @@ import { useTheme } from 'next-themes';
 import { Settings, RotateCcw, Save, Check } from 'lucide-react';
 import { APP_CONFIG, type DepthPreset } from '@/config/defaults';
 import { useSettings } from '@/hooks/useSettings';
-import { MODELS, getTextModels } from '@/config/models';
+import { MODELS } from '@/config/models';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
+import { ModelSelector } from '@/components/ui/model-selector';
+import { CostEstimator } from '@/components/ui/cost-estimator';
 
 export default function SettingsPage() {
   const { prefs, loaded, update, reset } = useSettings();
@@ -34,15 +36,6 @@ export default function SettingsPage() {
     setCustomPrompts(prefs.customPrompts);
     setSynced(true);
   }
-
-  const textModels = getTextModels();
-  const modelOptions = [
-    { value: 'auto', label: '🤖 Automático (baseado na profundidade)' },
-    ...textModels.map((m) => ({
-      value: m.id,
-      label: `${m.name} — $${m.inputPricePer1M}/$${m.outputPricePer1M} · ${(m.contextWindow / 1000).toFixed(0)}K ctx`,
-    })),
-  ];
 
   const handleSave = () => {
     update({
@@ -176,51 +169,34 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Decomposição de Query</label>
-              <p className="text-xs text-muted-foreground">
-                Gera sub-queries a partir da pergunta principal
-              </p>
-              <Select
-                value={stageModels.decomposition}
-                onChange={(e) =>
-                  setStageModels((s) => ({ ...s, decomposition: e.target.value }))
-                }
-                options={modelOptions}
-              />
-            </div>
+            <ModelSelector
+              label="Decomposição de Query — Gera sub-queries a partir da pergunta principal"
+              value={stageModels.decomposition}
+              onChange={(v) => setStageModels((s) => ({ ...s, decomposition: v }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Avaliação de Fontes</label>
-              <p className="text-xs text-muted-foreground">
-                Pontua relevância e credibilidade das fontes coletadas
-              </p>
-              <Select
-                value={stageModels.evaluation}
-                onChange={(e) =>
-                  setStageModels((s) => ({ ...s, evaluation: e.target.value }))
-                }
-                options={modelOptions}
-              />
-            </div>
+            <ModelSelector
+              label="Avaliação de Fontes — Pontua relevância e credibilidade"
+              value={stageModels.evaluation}
+              onChange={(v) => setStageModels((s) => ({ ...s, evaluation: v }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Síntese do Relatório</label>
-              <p className="text-xs text-muted-foreground">
-                Gera o relatório analítico final com citações
-              </p>
-              <Select
-                value={stageModels.synthesis}
-                onChange={(e) =>
-                  setStageModels((s) => ({ ...s, synthesis: e.target.value }))
-                }
-                options={modelOptions}
-              />
-            </div>
+            <ModelSelector
+              label="Síntese do Relatório — Gera o relatório analítico final"
+              value={stageModels.synthesis}
+              onChange={(v) => setStageModels((s) => ({ ...s, synthesis: v }))}
+            />
+
+            <CostEstimator
+              depth={defaultDepth}
+              decompositionModel={stageModels.decomposition}
+              evaluationModel={stageModels.evaluation}
+              synthesisModel={stageModels.synthesis}
+            />
 
             <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               Total de {MODELS.length} modelos disponíveis via Vercel AI Gateway.
-              Modelos com custo mais alto tendem a produzir relatórios mais detalhados e precisos.
+              Use os filtros e a busca para encontrar o modelo ideal.
             </p>
           </CardContent>
         </Card>

@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Search, Send, Loader2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Search, Send, Loader2, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react';
 import { APP_CONFIG } from '@/config/defaults';
 import { useResearch } from '@/hooks/useResearch';
 import { useSettings } from '@/hooks/useSettings';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useAppStore } from '@/lib/store/app-store';
+import { saveResearch, type StoredResearch } from '@/lib/db';
 import { ResearchInput } from '@/components/research/ResearchInput';
 import { ResearchProgress } from '@/components/research/ResearchProgress';
 import { ReportViewer } from '@/components/research/ReportViewer';
+import { CostEstimator } from '@/components/ui/cost-estimator';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
 
@@ -21,12 +24,14 @@ export default function Home() {
   const { app } = APP_CONFIG;
   const research = useResearch();
   const { prefs } = useSettings();
+  const { state: appState, dispatch } = useAppStore();
   useKeyboardShortcuts();
 
   const [followUpInput, setFollowUpInput] = useState('');
   const [followUpMessages, setFollowUpMessages] = useState<FollowUpMessage[]>([]);
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [lastQuery, setLastQuery] = useState<{ query: string; depth: string; domain: string | null }>({ query: '', depth: 'normal', domain: null });
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isIdle = research.status === 'idle';
@@ -38,6 +43,7 @@ export default function Home() {
     research.execute(query, depth, domainPreset);
     setLastQuery({ query, depth, domain: domainPreset ?? null });
     setFollowUpMessages([]);
+    dispatch({ type: 'SET_RESEARCH', payload: { savedToDb: false } });
   };
 
   const handleRetry = () => {
@@ -48,6 +54,65 @@ export default function Home() {
         lastQuery.domain as Parameters<typeof research.execute>[2]
       );
     }
+  };
+
+  const handleNewResearch = useCallback(() => {
+    if (isComplete && research.reportText && !appState.research.savedToDb) {
+      setShowResetConfirm(true);
+    } else {
+      research.reset();
+      setFollowUpMessages([]);
+      setFollowUpInput('');
+      setLastQuery({ query: '', depth: 'normal', domain: null });
+      setShowResetConfirm(false);
+    }
+  }, [isComplete, research, appState.research.savedToDb]);
+
+  const handleSaveAndReset = async () => {
+    if (research.response) {
+      try {
+        const r = research.response;
+        const stored: StoredResearch = {
+          id: r.id,
+          query: r.query,
+          title: r.report.title,
+          depth: lastQuery.depth,
+          domainPreset: lastQuery.domain,
+          modelPreference: prefs.modelPreference,
+          reportText: research.reportText,
+          citations: r.report.citations.map((c) => ({
+            index: c.index, url: c.url, title: c.title,
+            snippet: c.snippet ?? '', domain: c.domain,
+            credibilityTier: 'medium' as const,
+          })),
+          subQueries: research.subQueries.map((q, i) => ({
+            id: `sq-${i}`, text: typeof q === 'string' ? q : q.text, language: typeof q === 'string' ? 'auto' : (q.language ?? 'auto'), resultCount: 0,
+          })),
+          metadata: {
+            totalSources: research.sourcesFound,
+            totalSourcesKept: research.sourcesKept,
+            modelsUsed: r.metadata?.modelsUsed ?? [],
+            pipelineVersion: '0.1.0',
+          },
+          costUSD: research.costUSD,
+          confidenceLevel: 'medium',
+          favorite: false,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: r.metadata?.durationMs ?? 0,
+        };
+        await saveResearch(stored);
+        dispatch({ type: 'MARK_SAVED' });
+      } catch (e) {
+        console.error('Failed to save research:', e);
+      }
+    }
+    research.reset();
+    setFollowUpMessages([]);
+    setFollowUpInput('');
+    setLastQuery({ query: '', depth: 'normal', domain: null });
+    setShowResetConfirm(false);
   };
 
   const handleFollowUp = async () => {
@@ -123,6 +188,38 @@ export default function Home() {
               <kbd className="rounded border px-1">Ctrl+,</kbd> Config
             </p>
           </div>
+        )}
+
+        {/* Reset confirmation modal */}
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-md space-y-4 rounded-xl border border-border bg-card p-6 shadow-2xl">
+              <h3 className="text-lg font-semibold">Nova Pesquisa</h3>
+              <p className="text-sm text-muted-foreground">
+                A pesquisa atual ainda não foi salva no histórico. O que deseja fazer?
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { research.reset(); setFollowUpMessages([]); setFollowUpInput(''); setLastQuery({ query: '', depth: 'normal', domain: null }); setShowResetConfirm(false); }} className="flex-1 text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Descartar
+                </Button>
+                <Button size="sm" onClick={handleSaveAndReset} className="flex-1">
+                  Salvar e Nova
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Research button — visible when complete */}
+        {(isComplete || isError) && (
+          <Button variant="outline" size="sm" onClick={handleNewResearch} className="self-start">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Nova Pesquisa
+          </Button>
         )}
 
         {/* Input — always visible */}

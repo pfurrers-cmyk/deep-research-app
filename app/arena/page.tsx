@@ -2,11 +2,12 @@
 
 import { useState, useRef } from 'react';
 import { Swords, Plus, Trash2, Play, Loader2, Clock, DollarSign, FileText } from 'lucide-react';
-import { getTextModels } from '@/config/models';
 import { APP_CONFIG, type DepthPreset } from '@/config/defaults';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
+import { ModelSelector } from '@/components/ui/model-selector';
+import { CostEstimator } from '@/components/ui/cost-estimator';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 
 interface ArenaConfig {
@@ -59,15 +60,6 @@ export default function ArenaPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-
-  const textModels = getTextModels();
-  const modelOptions = [
-    { value: 'auto', label: 'Automático' },
-    ...textModels.slice(0, 50).map((m) => ({
-      value: m.id,
-      label: `${m.name} — $${m.inputPricePer1M}/$${m.outputPricePer1M}`,
-    })),
-  ];
 
   const depthOptions = Object.entries(APP_CONFIG.depth.presets).map(([key, p]) => ({
     value: key,
@@ -278,33 +270,33 @@ export default function ArenaPage() {
                     disabled={isRunning}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Decomposição</label>
-                  <Select
-                    value={config.decompositionModel}
-                    onChange={(e) => updateConfig(idx, { decompositionModel: e.target.value })}
-                    options={modelOptions}
-                    disabled={isRunning}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Avaliação</label>
-                  <Select
-                    value={config.evaluationModel}
-                    onChange={(e) => updateConfig(idx, { evaluationModel: e.target.value })}
-                    options={modelOptions}
-                    disabled={isRunning}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Síntese</label>
-                  <Select
-                    value={config.synthesisModel}
-                    onChange={(e) => updateConfig(idx, { synthesisModel: e.target.value })}
-                    options={modelOptions}
-                    disabled={isRunning}
-                  />
-                </div>
+                <ModelSelector
+                  label="Decomposição"
+                  value={config.decompositionModel}
+                  onChange={(v) => updateConfig(idx, { decompositionModel: v })}
+                  disabled={isRunning}
+                  showRecommendations={false}
+                />
+                <ModelSelector
+                  label="Avaliação"
+                  value={config.evaluationModel}
+                  onChange={(v) => updateConfig(idx, { evaluationModel: v })}
+                  disabled={isRunning}
+                  showRecommendations={false}
+                />
+                <ModelSelector
+                  label="Síntese"
+                  value={config.synthesisModel}
+                  onChange={(v) => updateConfig(idx, { synthesisModel: v })}
+                  disabled={isRunning}
+                  showRecommendations={false}
+                />
+                <CostEstimator
+                  depth={config.depth}
+                  decompositionModel={config.decompositionModel}
+                  evaluationModel={config.evaluationModel}
+                  synthesisModel={config.synthesisModel}
+                />
               </CardContent>
             </Card>
           ))}

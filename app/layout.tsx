@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { AppProvider } from '@/components/providers/app-provider';
 import { Header } from '@/components/layout/Header';
+import { ArtifactsPanel } from '@/components/artifacts/ArtifactsPanel';
 import { APP_CONFIG } from '@/config/defaults';
 import './globals.css';
 
@@ -31,8 +33,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider defaultTheme={APP_CONFIG.ui.defaultTheme}>
-          <Header />
-          <main className="mx-auto max-w-5xl">{children}</main>
+          <AppProvider>
+            <Header />
+            <main className="mx-auto max-w-5xl">{children}</main>
+            <ArtifactsPanel />
+          </AppProvider>
         </ThemeProvider>
       </body>
     </html>
