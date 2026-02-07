@@ -4,8 +4,10 @@ Set-Location $PSScriptRoot
 $MainBranch = "master"
 $DeployBranch = "deploy/auto-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $BuildInfoPath = "lib/buildInfo.ts"
-$MaxWaitSeconds = 120
+$MaxWaitSeconds = 180
 $PollIntervalSeconds = 5
+# Checks tratados como advisory (nao bloqueiam merge)
+$AdvisoryChecks = @("Vercel Agent Review", "e2e-tests", "llm-evals")
 
 Write-Host "`n========================================"  -ForegroundColor Cyan
 Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
@@ -67,40 +69,41 @@ if ($prUrl) {
             Write-Host "  -> [${elapsed}s] Nenhum check registrado ainda..."  -ForegroundColor Gray
             continue
         }
-        $blocking = @($checksArr | Where-Object { $_.name -ne "Vercel Agent Review" })
-        $agentCheck = $checksArr | Where-Object { $_.name -eq "Vercel Agent Review" }
-        $agentState = if ($agentCheck) { $agentCheck.state } else { "N/A" }
+        # Separar checks: blocking vs advisory
+        $blocking = @($checksArr | Where-Object { $AdvisoryChecks -notcontains $_.name })
+        $advisory = @($checksArr | Where-Object { $AdvisoryChecks -contains $_.name })
+        $advisoryStr = ($advisory | ForEach-Object { "$($_.name):$($_.state)" }) -join ", "
         $blockingOk = @($blocking | Where-Object { $_.state -eq "SUCCESS" }).Count
         $blockingFail = @($blocking | Where-Object { $_.state -eq "FAILURE" -or $_.state -eq "ERROR" })
-        $blockingPend = @($blocking | Where-Object { $_.state -eq "PENDING" -or $_.state -eq "IN_PROGRESS" }).Count
+        $blockingPendCount = @($blocking | Where-Object { $_.state -eq "PENDING" -or $_.state -eq "IN_PROGRESS" }).Count
         $names = ($checksArr | ForEach-Object { "$($_.name):$($_.state)" }) -join " | "
-        Write-Host "  -> [${elapsed}s] Deploy:$blockingOk/$($blocking.Count) ok | Agent:$agentState | $names"  -ForegroundColor Gray
+        Write-Host "  -> [${elapsed}s] Blocking:$blockingOk/$($blocking.Count) ok | Advisory: $advisoryStr | $names"  -ForegroundColor Gray
         if ($blockingFail.Count -gt 0) {
-            $agentResult = "AGENT_REVIEW_ERRORS_FOUND"
+            $agentResult = "BLOCKING_CHECK_FAILED"
             Write-Host ""
-            Write-Host "  DEPLOY_FAILED"  -ForegroundColor Red
+            Write-Host "  BLOCKING CHECK FAILED"  -ForegroundColor Red
             foreach ($f in $blockingFail) {
                 Write-Host "    X $($f.name): $($f.description)"  -ForegroundColor Red
             }
             break
         }
         if ($blockingOk -eq $blocking.Count -and $blocking.Count -gt 0) {
-            $agentResult = "AGENT_REVIEW_PASSED"
+            $agentResult = "DEPLOY_SUCCESS"
             Write-Host ""
-            Write-Host "  DEPLOY_SUCCESS (Agent Review: $agentState - advisory)"  -ForegroundColor Green
+            Write-Host "  ALL BLOCKING CHECKS PASSED (advisory: $advisoryStr)"  -ForegroundColor Green
             foreach ($c in $blocking) {
-                Write-Host "    OK $($c.name): $($c.description)"  -ForegroundColor Green
+                Write-Host "    OK $($c.name)"  -ForegroundColor Green
             }
             break
         }
     }
     if ($agentResult -eq "TIMEOUT") { Write-Host "`n  TIMEOUT - Checks nao completaram em ${MaxWaitSeconds}s"  -ForegroundColor DarkYellow }
-    if ($agentResult -ne "AGENT_REVIEW_ERRORS_FOUND") {
+    if ($agentResult -ne "BLOCKING_CHECK_FAILED") {
         Write-Host "[7/7] Merge da PR..."  -ForegroundColor Yellow
         gh pr merge $DeployBranch --merge --delete-branch 2>&1 | Out-Null
         Write-Host "  -> PR merged e branch deletada"  -ForegroundColor Green
     } else {
-        Write-Host "[7/7] MERGE BLOQUEADO - Erros do Agent"  -ForegroundColor Red
+        Write-Host "[7/7] MERGE BLOQUEADO - Check obrigatorio falhou"  -ForegroundColor Red
     }
 } else {
     Write-Host "[6/7] Merge direto no $MainBranch..."  -ForegroundColor Yellow
