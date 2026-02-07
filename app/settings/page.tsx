@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, RotateCcw, Save, Check } from 'lucide-react';
+import { Settings, RotateCcw, Save, Check, Sparkles } from 'lucide-react';
 import { APP_CONFIG, type DepthPreset } from '@/config/defaults';
 import { useSettings } from '@/hooks/useSettings';
 import { MODELS } from '@/config/models';
@@ -12,6 +12,8 @@ import { Select } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ui/model-selector';
 import { CostEstimator } from '@/components/ui/cost-estimator';
 import { LogViewer } from '@/components/debug/LogViewer';
+import { ProConfigPanel } from '@/components/pro/ProConfigPanel';
+import { TemplateManager } from '@/components/pro/TemplateManager';
 import { BUILD_INFO } from '@/lib/buildInfo';
 
 export default function SettingsPage() {
@@ -354,7 +356,34 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Info */}
+        {/* Prompt Reverso PRO */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Prompt Reverso PRO</CardTitle>
+                <CardDescription>Estilo, detalhe, citação, framework, modo, seções, filtros e exportação</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ProConfigPanel />
+          </CardContent>
+        </Card>
+
+        {/* Templates */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Templates de Pesquisa</CardTitle>
+            <CardDescription>Salve e reutilize configurações PRO completas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TemplateManager />
+          </CardContent>
+        </Card>
+
+        {/* Sobre */}
         <Card>
           <CardHeader>
             <CardTitle>Sobre</CardTitle>

@@ -4,16 +4,31 @@
 // evidence-based writing with quantitative emphasis, bilingual reasoning strategy.
 import type { AppConfig } from '@/config/defaults';
 import type { EvaluatedSource } from '@/lib/research/types';
+import type { UserPreferences } from '@/lib/config/settings-store';
 
 export function buildSynthesisPrompt(
   query: string,
   sources: EvaluatedSource[],
   config: AppConfig,
-  customPrompt?: string
+  customPrompt?: string,
+  proSettings?: UserPreferences['pro']
 ) {
   const { synthesis } = config.pipeline;
   const sectionLabels = synthesis.sectionLabels;
-  const sections = synthesis.reportSections;
+  // Use PRO sections if available, otherwise fallback to pipeline config
+  const sections = proSettings?.enabledSections?.length
+    ? proSettings.sectionOrder.filter((s) => proSettings.enabledSections.includes(s))
+    : synthesis.reportSections;
+
+  // PRO settings with defaults
+  const writingStyle = proSettings?.writingStyle ?? 'academic';
+  const detailLevel = proSettings?.detailLevel ?? 'standard';
+  const reasoningLang = proSettings?.reasoningLanguage ?? 'auto';
+  const citationFmt = proSettings?.citationFormat ?? 'inline_numbered';
+  const researchMode = proSettings?.researchMode ?? 'standard';
+
+  const detailOpts = config.pro?.detailLevel?.options?.[detailLevel];
+  const maxTokens = detailOpts?.maxTokens ?? synthesis.maxOutputTokens;
 
   if (customPrompt?.trim()) {
     const sourcesText = sources
@@ -33,7 +48,44 @@ export function buildSynthesisPrompt(
   const primaryCount = sources.filter((s) => (s as unknown as { sourceTier?: string }).sourceTier === 'primary').length;
   const totalCount = sources.length;
 
-  const system = `Você é um pesquisador sênior e analista de inteligência. Conduza sua análise internamente em inglês para maximizar precisão, mas ESCREVA o relatório final em ${synthesis.outputLanguage}.
+  // Build reasoning language instruction
+  const reasoningInstruction = {
+    pt: `Conduza sua análise internamente em português e ESCREVA o relatório final em ${synthesis.outputLanguage}.`,
+    en: `Conduza sua análise internamente em inglês para maximizar precisão, mas ESCREVA o relatório final em ${synthesis.outputLanguage}.`,
+    auto: `Conduza sua análise internamente em inglês para maximizar precisão, mas ESCREVA o relatório final em ${synthesis.outputLanguage}.`,
+    bilingual: `Conduza sua análise usando raciocínio bilíngue (inglês para análise técnica, português para contexto cultural) e ESCREVA o relatório final em ${synthesis.outputLanguage}.`,
+  }[reasoningLang] ?? `Conduza sua análise internamente em inglês para maximizar precisão, mas ESCREVA o relatório final em ${synthesis.outputLanguage}.`;
+
+  // Build writing style instruction
+  const styleInstruction = {
+    academic: 'Tom: acadêmico, formal, com linguagem técnica precisa e citações rigorosas.',
+    journalistic: 'Tom: jornalístico, com lead informativo, pirâmide invertida, linguagem clara e acessível.',
+    technical: 'Tom: técnico, com terminologia especializada, dados quantitativos e descrições precisas.',
+    casual: 'Tom: conversacional, acessível, com exemplos práticos e linguagem informal mas informativa.',
+    executive: 'Tom: executivo, direto ao ponto, com bullet points, métricas-chave e recomendações acionáveis.',
+  }[writingStyle] ?? 'Tom: analítico, preciso, direto.';
+
+  // Build citation format instruction
+  const citationInstruction = {
+    inline_numbered: 'Use [N] após CADA afirmação factual, onde N é o número da fonte (1 a ' + totalCount + ').',
+    footnotes: 'Use notas de rodapé numeradas¹²³ após afirmações factuais, listando referências no final de cada seção.',
+    apa7: 'Use citações no formato APA 7ª ed. (Autor, Ano) após afirmações factuais.',
+    abnt: 'Use citações no formato ABNT (AUTOR, ano) após afirmações factuais.',
+    ieee: 'Use citações no formato IEEE [N] com numeração sequencial entre colchetes.',
+    vancouver: 'Use citações no formato Vancouver com numeração sequencial em superscript.',
+  }[citationFmt] ?? 'Use [N] após CADA afirmação factual.';
+
+  // Build research mode instruction
+  const modeInstruction = {
+    standard: '',
+    comparative: '\n\n## MODO COMPARATIVO:\n- Organize a análise em formato de comparação lado a lado\n- Use tabelas comparativas quando possível\n- Destaque diferenças e similaridades entre os itens comparados\n- Apresente vantagens e desvantagens de cada opção',
+    temporal: '\n\n## MODO TEMPORAL:\n- Organize a análise cronologicamente\n- Identifique tendências, evoluções e pontos de inflexão\n- Use uma seção de Linha do Tempo\n- Destaque mudanças significativas entre períodos',
+    contrarian: '\n\n## MODO CONTRÁRIO:\n- Apresente a visão majoritária E os contrapontos com peso igual\n- Estruture como "Ponto" e "Contraponto" em cada tópico\n- Não tome partido — apresente evidências para ambos os lados\n- Avalie a força da evidência para cada posição',
+    meta_analysis: '\n\n## MODO META-ANÁLISE:\n- Trate as fontes como estudos individuais a serem sintetizados\n- Apresente métricas agregadas quando possível\n- Classifique fontes por qualidade metodológica\n- Identifique padrões e outliers\n- Inclua contagem de estudos que suportam cada conclusão',
+    fact_check: '\n\n## MODO FACT-CHECK:\n- Para cada afirmação principal, emita um VEREDITO: ✅ Confirmado, ⚠️ Parcialmente verdadeiro, ❌ Falso, ❓ Não verificável\n- Cite as evidências específicas para cada veredito\n- Avalie a confiabilidade de cada fonte utilizada\n- Destaque contexto ausente ou distorcido',
+  }[researchMode] ?? '';
+
+  const system = `Você é um pesquisador sênior e analista de inteligência. ${reasoningInstruction}
 
 Sua tarefa: receber uma pergunta de pesquisa e ${totalCount} fontes já coletadas e avaliadas, e SINTETIZAR um relatório profundo, original e analítico — como um artigo de revista de pesquisa de primeira linha.
 
@@ -69,8 +121,8 @@ ${sectionsInstructions}
 - Se dados quantitativos forem escassos, note isso explicitamente na seção de Limitações
 - Sempre que possível, organize dados comparativos em **tabelas Markdown** (| col1 | col2 |)
 
-### Citações Inline
-- Use [N] após CADA afirmação factual, onde N é o número da fonte (1 a ${totalCount})
+### Citações
+- ${citationInstruction}
 - Use APENAS números de 1 a ${totalCount} — nunca invente fontes
 - Um bom parágrafo tem 3-6 citações cruzando fontes
 
@@ -82,8 +134,9 @@ ${sectionsInstructions}
 ### Idioma e Estilo
 - Relatório final em **${synthesis.outputLanguage}**
 - Termos técnicos podem permanecer em inglês quando são padrão na área
-- Tom: analítico, preciso, direto — sem linguagem vaga ou hedging excessivo
+- ${styleInstruction}
 - Use Markdown: ##, ###, **bold**, tabelas, listas quando útil — mas corpo principal = parágrafos dissertativos
+- **Tamanho alvo**: aproximadamente ${maxTokens} tokens (${detailOpts?.pages ?? '~3 páginas'})
 
 ## FILTRAGEM DE CONTEÚDO IRRELEVANTE (CRÍTICO):
 - Algumas fontes podem conter trechos que NÃO são relevantes para a pergunta de pesquisa (ex: conteúdo de sidebar, artigos relacionados, ads, dados de outras seções do site)
@@ -105,7 +158,7 @@ ${sectionsInstructions}
 - ❌ Repetir a mesma informação em seções diferentes
 - ❌ Gerar relatório superficial sem dados específicos
 - ❌ Incluir dados/fatos de fontes que não são relevantes à pergunta — mesmo que estejam nas fontes fornecidas
-- ❌ Copiar ou adaptar os exemplos deste prompt — use-os apenas como referência de ESTILO`;
+- ❌ Copiar ou adaptar os exemplos deste prompt — use-os apenas como referência de ESTILO${modeInstruction}`;
 
   const sourcesText = sources
     .map(

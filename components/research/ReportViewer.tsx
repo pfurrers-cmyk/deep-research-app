@@ -2,7 +2,8 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Copy, Check, FileText, Clock, DollarSign, Database, Download, Sparkles, Loader2, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Copy, Check, FileText, Clock, DollarSign, Database, Download, Sparkles, Loader2, AlertTriangle, CheckCircle2, Info, FileOutput } from 'lucide-react';
+import { ExportModal } from '@/components/export/ExportModal';
 import { APP_CONFIG } from '@/config/defaults';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 import type { ResearchMetadata, ResearchResponse } from '@/lib/research/types';
@@ -21,6 +22,7 @@ export function ReportViewer({
   isStreaming,
 }: ReportViewerProps) {
   const [copied, setCopied] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewResult, setReviewResult] = useState<{
     overallScore: number;
@@ -144,11 +146,11 @@ export function ReportViewer({
                 {reviewLoading ? 'Revisando...' : reviewResult ? 'Re-revisar' : 'Revisar com IA'}
               </button>
               <button
-                onClick={handleExportMarkdown}
+                onClick={() => setShowExport(true)}
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <Download className="h-3.5 w-3.5" />
-                .md
+                <FileOutput className="h-3.5 w-3.5" />
+                Exportar
               </button>
             </>
           )}
@@ -316,6 +318,26 @@ export function ReportViewer({
           </ul>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        open={showExport}
+        onClose={() => setShowExport(false)}
+        reportText={reportText}
+        query={metadata?.query ?? ''}
+        citations={response?.report?.citations?.map((c) => ({
+          index: c.index,
+          title: c.title,
+          url: c.url,
+          domain: c.domain,
+        }))}
+        metadata={{
+          generatedAt: metadata?.createdAt,
+          model: metadata?.modelsUsed?.[metadata.modelsUsed.length - 1],
+          depth: metadata?.depth,
+          costUSD: response?.cost?.totalCostUSD,
+        }}
+      />
     </div>
   );
 }

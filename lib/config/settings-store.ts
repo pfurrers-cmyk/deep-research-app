@@ -38,6 +38,26 @@ export interface UserPreferences {
     keepMax: number;
   };
 
+  // PRO — Prompt Reverso PRO settings
+  pro: {
+    writingStyle: string;
+    detailLevel: string;
+    reasoningLanguage: string;
+    citationFormat: string;
+    evaluationFramework: string;
+    researchMode: string;
+    enabledSections: string[];
+    sectionOrder: string[];
+    advancedFilters: {
+      recency: null | 'day' | 'week' | 'month' | 'year';
+      sourceTypes: string[];
+      languages: string[];
+      allowlist: string[];
+      blocklist: string[];
+    };
+    exportFormat: string;
+  };
+
   // Aparência
   defaultTheme: 'dark' | 'light' | 'system';
 
@@ -65,6 +85,24 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     fetchMax: 50,
     keepMin: 3,
     keepMax: 20,
+  },
+  pro: {
+    writingStyle: 'academic',
+    detailLevel: 'standard',
+    reasoningLanguage: 'auto',
+    citationFormat: 'inline_numbered',
+    evaluationFramework: 'craap',
+    researchMode: 'standard',
+    enabledSections: ['executive_summary', 'context', 'key_findings', 'analysis', 'conclusion', 'sources'],
+    sectionOrder: ['executive_summary', 'context', 'key_findings', 'analysis', 'conclusion', 'sources'],
+    advancedFilters: {
+      recency: null,
+      sourceTypes: [],
+      languages: ['pt', 'en'],
+      allowlist: [],
+      blocklist: [],
+    },
+    exportFormat: 'markdown',
   },
   defaultTheme: 'dark',
   updatedAt: new Date().toISOString(),
@@ -105,6 +143,14 @@ export function savePreferences(prefs: Partial<UserPreferences>): UserPreference
     sourceConfig: {
       ...current.sourceConfig,
       ...(prefs.sourceConfig ?? {}),
+    },
+    pro: {
+      ...current.pro,
+      ...(prefs.pro ?? {}),
+      advancedFilters: {
+        ...current.pro.advancedFilters,
+        ...(prefs.pro?.advancedFilters ?? {}),
+      },
     },
     updatedAt: new Date().toISOString(),
   };

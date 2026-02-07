@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, type FormEvent, type KeyboardEvent } from 'react';
-import { Search, Loader2, SlidersHorizontal, BookTemplate } from 'lucide-react';
+import { Search, Loader2, SlidersHorizontal, BookTemplate, Sparkles } from 'lucide-react';
+import { ProConfigPanel } from '@/components/pro/ProConfigPanel';
 import { APP_CONFIG, type DepthPreset, type DomainPreset } from '@/config/defaults';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   const [domainPreset, setDomainPreset] = useState<DomainPreset | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showPro, setShowPro] = useState(false);
   const { strings, depth: depthConfig, domainPresets, templates } = APP_CONFIG;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -204,6 +206,25 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* PRO Config */}
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowPro(!showPro)}
+              className={cn(
+                'flex items-center gap-1.5 text-sm font-medium transition-colors',
+                showPro ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Sparkles className="h-4 w-4" />
+              Prompt Reverso PRO
+            </button>
+            {showPro && (
+              <div className="rounded-lg border border-primary/20 bg-card/50 p-3">
+                <ProConfigPanel compact />
+              </div>
+            )}
           </div>
 
           {/* Templates */}
