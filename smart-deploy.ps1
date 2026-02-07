@@ -49,9 +49,10 @@ if ($ghOk) {
 
 $agentResult = "DIRECT_MERGE"
 if ($prUrl) {
-    Write-Host "[6/7] Aguardando Vercel Agent (JSON polling)..."  -ForegroundColor Yellow
+    Write-Host "[6/7] Aguardando Vercel Agent (JSON polling a cada ${PollIntervalSeconds}s)..."  -ForegroundColor Yellow
     $elapsed = 0
     $agentResult = "TIMEOUT"
+    $deployPassed = $false
     while ($elapsed -lt $MaxWaitSeconds) {
         Start-Sleep -Seconds $PollIntervalSeconds
         $elapsed += $PollIntervalSeconds
@@ -67,11 +68,12 @@ if ($prUrl) {
             continue
         }
         $total = $checksArr.Count
-        $done = ($checksArr | Where-Object { $_.state -ne "PENDING" }).Count
-        $failed = ($checksArr | Where-Object { $_.state -eq "FAILURE" -or $_.state -eq "ERROR" })
-        $allSuccess = ($checksArr | Where-Object { $_.state -ne "SUCCESS" }).Count -eq 0
+        $succeeded = @($checksArr | Where-Object { $_.state -eq "SUCCESS" }).Count
+        $failed = @($checksArr | Where-Object { $_.state -eq "FAILURE" -or $_.state -eq "ERROR" })
+        $pending = @($checksArr | Where-Object { $_.state -eq "PENDING" -or $_.state -eq "IN_PROGRESS" }).Count
+        $allSuccess = $pending -eq 0 -and $failed.Count -eq 0
         $names = ($checksArr | ForEach-Object { "$($_.name):$($_.state)" }) -join " | "
-        Write-Host "  -> [${elapsed}s] $done/$total concluidos - $names"  -ForegroundColor Gray
+        Write-Host "  -> [${elapsed}s] $succeeded/$total ok, $pending pendente(s) - $names"  -ForegroundColor Gray
         if ($failed.Count -gt 0) {
             $agentResult = "AGENT_REVIEW_ERRORS_FOUND"
             Write-Host ""
@@ -90,8 +92,20 @@ if ($prUrl) {
             }
             break
         }
+        $vercelDeploy = $checksArr | Where-Object { $_.name -eq "Vercel" }
+        if ($vercelDeploy -and $vercelDeploy.state -eq "SUCCESS" -and -not $deployPassed) {
+            $deployPassed = $true
+            Write-Host "  -> Deploy Vercel OK! Aguardando Agent Review..."  -ForegroundColor Green
+        }
+        if ($deployPassed -and $elapsed -ge 90) {
+            $agentResult = "DEPLOY_OK_AGENT_SLOW"
+            Write-Host ""
+            Write-Host "  DEPLOY_OK_AGENT_SLOW - Deploy passou, Agent Review ainda em andamento (${elapsed}s)"  -ForegroundColor DarkYellow
+            Write-Host "  -> Prosseguindo com merge. Agent revisara post-merge."  -ForegroundColor DarkYellow
+            break
+        }
     }
-    if ($agentResult -eq "TIMEOUT") { Write-Host "`n  TIMEOUT - Agent nao respondeu em ${MaxWaitSeconds}s"  -ForegroundColor DarkYellow }
+    if ($agentResult -eq "TIMEOUT") { Write-Host "`n  TIMEOUT - Nenhum check respondeu em ${MaxWaitSeconds}s"  -ForegroundColor DarkYellow }
     if ($agentResult -ne "AGENT_REVIEW_ERRORS_FOUND") {
         Write-Host "[7/7] Merge da PR..."  -ForegroundColor Yellow
         gh pr merge $DeployBranch --merge --delete-branch 2>&1 | Out-Null
