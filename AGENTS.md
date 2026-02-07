@@ -35,3 +35,4 @@
 - AI Gateway: modelos acessados via `gateway.chat(modelId)`, `gateway.image(modelId)`, `gateway.video(modelId)`
 - Cost tracking: `CostTracker` acumula custos por etapa do pipeline
 - Versioning: `lib/buildInfo.ts` contém version, changelog, timestamps — atualizado pelo smart-deploy.ps1
+- Image generation: API retorna binary (não base64 JSON) para evitar limite de 4.5MB do Vercel
