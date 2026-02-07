@@ -14,11 +14,7 @@ import { ReportViewer } from '@/components/research/ReportViewer';
 import { CostEstimator } from '@/components/ui/cost-estimator';
 import { MarkdownRenderer } from '@/components/research/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
-
-interface FollowUpMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import type { FollowUpMessage } from '@/lib/research/types';
 
 export default function Home() {
   const { app } = APP_CONFIG;
@@ -120,7 +116,7 @@ export default function Home() {
 
     const question = followUpInput.trim();
     setFollowUpInput('');
-    setFollowUpMessages((prev) => [...prev, { role: 'user', content: question }]);
+    setFollowUpMessages((prev) => [...prev, { id: `fu-${Date.now()}`, role: 'user', content: question, timestamp: new Date().toISOString() }]);
     setFollowUpLoading(true);
 
     try {
@@ -143,7 +139,8 @@ export default function Home() {
       const decoder = new TextDecoder();
       let assistantText = '';
 
-      setFollowUpMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+      const assistantMsgId = `fa-${Date.now()}`;
+      setFollowUpMessages((prev) => [...prev, { id: assistantMsgId, role: 'assistant', content: '', timestamp: new Date().toISOString() }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -151,7 +148,7 @@ export default function Home() {
         assistantText += decoder.decode(value, { stream: true });
         setFollowUpMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1] = { role: 'assistant', content: assistantText };
+          updated[updated.length - 1] = { ...updated[updated.length - 1], content: assistantText };
           return updated;
         });
       }
@@ -160,7 +157,7 @@ export default function Home() {
     } catch (err) {
       setFollowUpMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: `Erro: ${err instanceof Error ? err.message : 'Falha no follow-up'}` },
+        { id: `fe-${Date.now()}`, role: 'assistant', content: `Erro: ${err instanceof Error ? err.message : 'Falha no follow-up'}`, timestamp: new Date().toISOString() },
       ]);
     } finally {
       setFollowUpLoading(false);

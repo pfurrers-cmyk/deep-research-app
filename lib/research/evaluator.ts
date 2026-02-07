@@ -59,10 +59,10 @@ export async function evaluateSources(
 
   const modelSelection = selectModel('evaluation', 'auto', 'normal', config);
 
-  const BATCH_SIZE = 15;
+  const batchSize = evaluation.evaluationBatchSize;
   const batches: SearchResult[][] = [];
-  for (let i = 0; i < sources.length; i += BATCH_SIZE) {
-    batches.push(sources.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < sources.length; i += batchSize) {
+    batches.push(sources.slice(i, i + batchSize));
   }
 
   const allEvaluations: Array<{
@@ -140,7 +140,7 @@ export async function evaluateSources(
     );
 
     // Composite weighted score now includes bias
-    const biasWeight = 0.1;
+    const biasWeight = evaluation.weightBias;
     const adjustedRelevanceWeight = evaluation.weightRelevance - biasWeight / 3;
     const adjustedRecencyWeight = evaluation.weightRecency - biasWeight / 3;
     const adjustedAuthorityWeight = evaluation.weightAuthority - biasWeight / 3;

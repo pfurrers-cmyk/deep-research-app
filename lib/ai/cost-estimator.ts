@@ -29,8 +29,7 @@ export class CostTracker {
     return entry;
   }
 
-  addSearchCost(numRequests: number): CostEntry {
-    const costPerRequest = 0.005;
+  addSearchCost(numRequests: number, costPerRequest = 0.005): CostEntry {
     const entry: CostEntry = {
       stage: 'search',
       modelId: 'gateway/search',

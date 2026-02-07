@@ -52,9 +52,11 @@ export const APP_CONFIG = {
     evaluation: {
       relevanceThreshold: 0.5,
       maxSourcesToKeep: 15,
+      evaluationBatchSize: 15,
       weightRelevance: 0.5,
       weightRecency: 0.3,
       weightAuthority: 0.2,
+      weightBias: 0.1,
     },
 
     // Etapa 4: Extração profunda
