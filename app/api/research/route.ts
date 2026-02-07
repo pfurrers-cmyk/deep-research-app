@@ -2,6 +2,7 @@
 
 import { executePipeline } from '@/lib/research/pipeline';
 import { createSSEResponse } from '@/lib/utils/streaming';
+import { debug } from '@/lib/utils/debug-logger';
 import type { ResearchRequest } from '@/lib/research/types';
 import type { DepthPreset } from '@/config/defaults';
 
@@ -22,17 +23,19 @@ export async function POST(req: Request) {
     };
 
     if (!request.query.trim()) {
+      debug.warn('Research', 'Query vazia recebida');
       return Response.json(
         { error: 'Query is required' },
         { status: 400 }
       );
     }
 
+    debug.info('Research', `Nova pesquisa: "${request.query.slice(0, 80)}"`, { depth: request.depth, model: request.modelPreference });
     const { stream } = executePipeline(request);
 
     return createSSEResponse(stream);
   } catch (error) {
-    console.error('Research API error:', error);
+    debug.error('Research', `Erro na API de pesquisa: ${error instanceof Error ? error.message : String(error)}`);
     return Response.json(
       { error: 'Internal server error' },
       { status: 500 }

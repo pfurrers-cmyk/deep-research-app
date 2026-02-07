@@ -1,6 +1,7 @@
 // app/api/generate/route.ts — Image & Video generation API via AI Gateway
 import { gateway } from '@ai-sdk/gateway';
 import { generateImage, experimental_generateVideo } from 'ai';
+import { debug } from '@/lib/utils/debug-logger';
 
 export const maxDuration = 120;
 
@@ -15,8 +16,12 @@ export async function POST(req: Request) {
     };
 
     if (!prompt?.trim()) {
+      debug.warn('Generate', 'Prompt vazio recebido');
       return Response.json({ error: 'Prompt é obrigatório' }, { status: 400 });
     }
+
+    const startTime = Date.now();
+    debug.info('Generate', `Iniciando geração: mode=${mode || 'image'}, model=${model}`, { prompt: prompt.slice(0, 100), size });
 
     // ============================================================
     // VIDEO GENERATION
@@ -32,6 +37,7 @@ export async function POST(req: Request) {
       const base64 = video.base64;
       const dataUrl = `data:video/mp4;base64,${base64}`;
 
+      debug.timed('Generate', `Vídeo gerado com sucesso: ${videoModelId}`, startTime);
       return Response.json({
         type: 'video',
         videoUrl: dataUrl,
@@ -52,15 +58,17 @@ export async function POST(req: Request) {
     const base64 = result.image.base64;
     const dataUrl = `data:image/png;base64,${base64}`;
 
+    debug.timed('Generate', `Imagem gerada com sucesso: ${imageModelId}`, startTime);
     return Response.json({
       type: 'image',
       imageUrl: dataUrl,
       model: imageModelId,
     });
   } catch (error) {
-    console.error('Generate API error:', error);
+    const errMsg = error instanceof Error ? error.message : 'Falha na geração';
+    debug.error('Generate', `Erro na geração: ${errMsg}`, { error: String(error) });
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Falha na geração' },
+      { error: errMsg },
       { status: 500 }
     );
   }

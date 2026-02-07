@@ -12,6 +12,7 @@ import { executeSearch } from '@/lib/research/search';
 import { evaluateSources } from '@/lib/research/evaluator';
 import { synthesizeReport } from '@/lib/research/synthesizer';
 import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
+import { debug } from '@/lib/utils/debug-logger';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type {
   ResearchRequest,
@@ -58,12 +59,14 @@ export function executePipeline(
   const costTracker = createCostTracker();
   const startTime = Date.now();
 
+  debug.info('Pipeline', `Pesquisa iniciada: "${request.query.slice(0, 80)}"`, { depth, researchId });
+
   const { stream, writer } = createSSEStream();
 
   // Run pipeline async — don't await, let it stream
   runPipeline(writer, request, config, depth, preset, costTracker, researchId, startTime).catch(
     (error) => {
-      console.error('Pipeline fatal error:', error);
+      debug.error('Pipeline', `Erro fatal no pipeline: ${error instanceof Error ? error.message : String(error)}`);
       writer.writeEvent({
         type: 'error',
         error: {
@@ -106,6 +109,8 @@ async function runPipeline(
       request.customModelMap
     );
     modelsUsed.push(decompositionModel.modelId);
+    debug.info('Pipeline', `Decomposição: modelo=${decompositionModel.modelId}`);
+    const stageStart = Date.now();
 
     const { system, prompt } = buildDecompositionPrompt(
       request.query,
@@ -150,10 +155,11 @@ async function runPipeline(
       decompositionModel.estimatedOutputTokens
     );
 
+    debug.timed('Pipeline', `Decomposição concluída: ${subQueries.length} sub-queries`, stageStart);
     writer.writeEvent({ type: 'queries', data: subQueries });
     emitStage(writer, 'decomposing', 'completed', 0.15, config);
   } catch (error) {
-    console.error('Decomposition failed:', error);
+    debug.error('Pipeline', `Decomposição falhou: ${error instanceof Error ? error.message : String(error)}`);
     emitStage(writer, 'decomposing', 'error', 0.15, config);
     writer.writeEvent({
       type: 'error',
@@ -188,6 +194,7 @@ async function runPipeline(
       }
     }
 
+    const searchStart = Date.now();
     searchResults = await executeSearch(
       subQueries,
       config,
@@ -208,9 +215,10 @@ async function runPipeline(
     );
 
     costTracker.addSearchCost(subQueries.length);
+    debug.timed('Pipeline', `Busca concluída: ${searchResults.length} resultados de ${subQueries.length} sub-queries`, searchStart);
     emitStage(writer, 'searching', 'completed', 0.4, config);
   } catch (error) {
-    console.error('Search failed:', error);
+    debug.error('Pipeline', `Busca falhou: ${error instanceof Error ? error.message : String(error)}`);
     emitStage(writer, 'searching', 'error', 0.4, config);
     writer.writeEvent({
       type: 'error',
@@ -226,6 +234,7 @@ async function runPipeline(
   }
 
   if (searchResults.length === 0) {
+    debug.warn('Pipeline', 'Nenhum resultado encontrado para as sub-queries');
     writer.writeEvent({
       type: 'error',
       error: {
@@ -254,6 +263,8 @@ async function runPipeline(
       request.customModelMap
     );
     modelsUsed.push(evaluationModel.modelId);
+    debug.info('Pipeline', `Avaliação: modelo=${evaluationModel.modelId}, fontes=${searchResults.length}`);
+    const evalStart = Date.now();
 
     evaluatedSources = await evaluateSources(request.query, searchResults, config);
 
@@ -273,9 +284,10 @@ async function runPipeline(
       },
     });
 
+    debug.timed('Pipeline', `Avaliação concluída: ${evaluatedSources.length}/${searchResults.length} fontes mantidas`, evalStart);
     emitStage(writer, 'evaluating', 'completed', 0.55, config);
   } catch (error) {
-    console.error('Evaluation failed, using raw sources:', error);
+    debug.warn('Pipeline', `Avaliação falhou, usando fontes brutas: ${error instanceof Error ? error.message : String(error)}`);
     // Fallback: use raw sources without evaluation
     evaluatedSources = searchResults.map((s) => ({
       ...s,
@@ -316,6 +328,8 @@ async function runPipeline(
       request.customModelMap
     );
     modelsUsed.push(synthesisModel.modelId);
+    debug.info('Pipeline', `Síntese: modelo=${synthesisModel.modelId}, fontes=${evaluatedSources.length}`);
+    const synthStart = Date.now();
 
     reportText = await synthesizeReport(
       request.query,
@@ -334,9 +348,10 @@ async function runPipeline(
       synthesisModel.estimatedOutputTokens
     );
 
+    debug.timed('Pipeline', `Síntese concluída: ${reportText.length} caracteres`, synthStart);
     emitStage(writer, 'synthesizing', 'completed', 0.9, config);
   } catch (error) {
-    console.error('Synthesis failed:', error);
+    debug.error('Pipeline', `Síntese falhou: ${error instanceof Error ? error.message : String(error)}`);
     emitStage(writer, 'synthesizing', 'error', 0.9, config);
     writer.writeEvent({
       type: 'error',
@@ -442,5 +457,6 @@ async function runPipeline(
     },
   });
 
+  debug.timed('Pipeline', `Pesquisa finalizada: ${evaluatedSources.length} fontes, ${reportText.length} chars, custo=$${costBreakdown.totalCostUSD.toFixed(4)}`, startTime);
   writer.close();
 }

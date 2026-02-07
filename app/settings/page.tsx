@@ -11,6 +11,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Select } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ui/model-selector';
 import { CostEstimator } from '@/components/ui/cost-estimator';
+import { LogViewer } from '@/components/debug/LogViewer';
+import { BUILD_INFO } from '@/lib/buildInfo';
 
 export default function SettingsPage() {
   const { prefs, loaded, update, reset } = useSettings();
@@ -280,7 +282,7 @@ export default function SettingsPage() {
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Versão</dt>
-                <dd className="font-mono">0.1.0</dd>
+                <dd className="font-mono">{BUILD_INFO.version}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Framework</dt>
@@ -297,6 +299,9 @@ export default function SettingsPage() {
             </dl>
           </CardContent>
         </Card>
+
+        {/* Debug Logs */}
+        <LogViewer />
       </div>
     </div>
   );
