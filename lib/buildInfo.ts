@@ -1,13 +1,13 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '0.2.2',
-  buildTimestamp: '2026-02-07T12:19:03.449Z',
-  commitHash: '4deb451',
+  version: '0.2.3',
+  buildTimestamp: '2026-02-07T12:23:24.168Z',
+  commitHash: 'c45634a',
   branch: 'master',
   changelog: [
-    'smart-deploy.ps1: contagem correta SUCCESS vs IN_PROGRESS vs PENDING',
-    'Lógica DEPLOY_OK_AGENT_SLOW: se deploy Vercel passou mas Agent Review demora >90s, prossegue merge',
-    'Display melhorado: X/Y ok, Z pendente(s) com nomes de cada check',
+    'smart-deploy.ps1: Vercel Agent Review tratado como advisory (não-bloqueante)',
+    'Checks separados em blocking (Vercel, Preview Comments) vs advisory (Agent Review)',
+    'Merge imediato quando blocking checks passam — sem esperar Agent Review eternamente IN_PROGRESS',
   ],
-  previousVersion: '0.2.1',
+  previousVersion: '0.2.2',
 };
