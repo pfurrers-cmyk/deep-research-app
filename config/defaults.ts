@@ -6,7 +6,7 @@ export const APP_CONFIG = {
   // APLICAÇÃO
   // ============================================================
   app: {
-    name: 'Deep Research',
+    name: 'Âmago.AI',
     locale: 'pt-BR',
     timezone: 'America/Sao_Paulo',
     theme: 'dark' as 'dark' | 'light' | 'system',
@@ -775,7 +775,7 @@ export const APP_CONFIG = {
     pdf: {
       paperSize: 'A4',
       margins: { top: 20, right: 20, bottom: 20, left: 20 },
-      headerText: 'Deep Research Report',
+      headerText: 'Âmago.AI Report',
       footerText: 'Gerado automaticamente',
       includeTableOfContents: true,
     },

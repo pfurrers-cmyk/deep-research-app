@@ -220,8 +220,8 @@ export default function Home() {
             </div>
             <h1 className="text-4xl font-bold tracking-tight">{app.name}</h1>
             <p className="max-w-md text-muted-foreground">
-              Ferramenta pessoal de pesquisa profunda automatizada com busca,
-              análise, síntese e relatório estruturado com fontes citadas.
+              Pesquisa profunda automatizada com busca, análise, síntese e
+              relatório estruturado com fontes citadas.
             </p>
           </div>
         )}

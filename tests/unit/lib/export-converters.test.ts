@@ -30,7 +30,7 @@ describe('Export Converters', () => {
       expect(result.filename).toMatch(/\.md$/)
       expect(result.content).toContain('---')
       expect(result.content).toContain('title: "Impacto da IA na educação"')
-      expect(result.content).toContain('generator: "Deep Research App"')
+      expect(result.content).toContain('generator: "Âmago.AI"')
       expect(result.content).toContain('## Resumo Executivo')
     })
   })
@@ -76,7 +76,7 @@ describe('Export Converters', () => {
       expect(result.filename).toMatch(/thread-.*\.txt$/)
       expect(result.content).toContain('THREAD')
       expect(result.content).toContain('Post 1/')
-      expect(result.content).toContain('Deep Research App')
+      expect(result.content).toContain('Âmago.AI')
     })
   })
 
@@ -88,7 +88,7 @@ describe('Export Converters', () => {
 
       const data = JSON.parse(result.content)
       expect(data.query).toBe('Impacto da IA na educação')
-      expect(data.metadata.generator).toBe('Deep Research App')
+      expect(data.metadata.generator).toBe('Âmago.AI')
       expect(data.citations).toHaveLength(3)
       expect(data.sections.length).toBeGreaterThan(0)
     })

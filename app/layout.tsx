@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: APP_CONFIG.app.name,
-  description: 'Ferramenta pessoal de pesquisa profunda automatizada',
+  description: 'Âmago.AI — Pesquisa profunda, chat com IA e geração de conteúdo',
 };
 
 export default function RootLayout({

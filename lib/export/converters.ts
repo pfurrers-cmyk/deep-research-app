@@ -26,7 +26,7 @@ date: "${metadata?.generatedAt ?? new Date().toISOString()}"
 model: "${metadata?.model ?? 'N/A'}"
 depth: "${metadata?.depth ?? 'N/A'}"
 cost: "${metadata?.costUSD?.toFixed(4) ?? 'N/A'}"
-generator: "Deep Research App"
+generator: "Âmago.AI"
 ---
 
 `;
@@ -66,10 +66,10 @@ export function exportToPDFHtml(input: ExportInput): ExportResult {
 <body>
 <h1>${escapeHtml(query)}</h1>
 <div class="meta">
-  Gerado em: ${metadata?.generatedAt ?? new Date().toLocaleString('pt-BR')} | Modelo: ${metadata?.model ?? 'N/A'} | Deep Research App
+  Gerado em: ${metadata?.generatedAt ?? new Date().toLocaleString('pt-BR')} | Modelo: ${metadata?.model ?? 'N/A'} | Âmago.AI
 </div>
 ${markdownToHtml(reportText)}
-<div class="footer">Relatório gerado automaticamente pelo Deep Research App</div>
+<div class="footer">Relatório gerado automaticamente pelo Âmago.AI</div>
 </body>
 </html>`;
 
@@ -97,7 +97,7 @@ export function exportToSlides(input: ExportInput): ExportResult {
   });
 
   // Add title slide
-  slides.unshift({ title: query, bullets: ['Deep Research App', `${slides.length} seções`, new Date().toLocaleDateString('pt-BR')] });
+  slides.unshift({ title: query, bullets: ['Âmago.AI', `${slides.length} seções`, new Date().toLocaleDateString('pt-BR')] });
 
   const slidesHtml = slides.map((s, i) => `
     <div class="slide" id="slide-${i}">
@@ -209,7 +209,7 @@ export function exportToSocialThread(input: ExportInput): ExportResult {
   });
 
   // Thread closer
-  posts.push(`Gostou? ♻️ Compartilhe!\n\nPesquisa gerada automaticamente pelo Deep Research App 🔬`);
+  posts.push(`Gostou? ♻️ Compartilhe!\n\nPesquisa gerada automaticamente pelo Âmago.AI 🔬`);
 
   const content = posts.map((p, i) => `--- Post ${i + 1}/${posts.length} ---\n${p}`).join('\n\n');
 
@@ -230,7 +230,7 @@ export function exportToJSON(input: ExportInput): ExportResult {
     metadata: {
       ...metadata,
       exportedAt: new Date().toISOString(),
-      generator: 'Deep Research App',
+      generator: 'Âmago.AI',
     },
     report: reportText,
     citations: citations ?? [],

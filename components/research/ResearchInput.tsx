@@ -101,7 +101,7 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
             placeholder={strings.placeholders.queryInput}
             disabled={isLoading}
             rows={1}
-            className="min-h-[56px] max-h-[200px] w-full resize-none rounded-xl border border-input bg-card pl-12 pr-36 pt-4 pb-4 text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[56px] max-h-[200px] w-full resize-none rounded-xl border border-input bg-card pl-12 pr-44 pt-4 pb-4 text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
             autoFocus
           />
           <div className="absolute right-2 bottom-2 flex items-center gap-1.5">

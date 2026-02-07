@@ -1,8 +1,8 @@
-# Deep Research App — Arquitetura
+# Âmago.AI — Arquitetura
 
 ## Visão Geral
 
-Aplicativo web pessoal de **Deep Research** que executa um pipeline multi-etapa de busca, análise, síntese e geração de relatório estruturado com fontes citadas.
+Aplicativo web pessoal **Âmago.AI** que executa um pipeline multi-etapa de busca, análise, síntese e geração de relatório estruturado com fontes citadas.
 
 **Single-tenant** — uso pessoal exclusivo, sem autenticação multi-user.
 

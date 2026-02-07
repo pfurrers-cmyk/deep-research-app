@@ -4,7 +4,7 @@
  * Client-side: logs salvos em localStorage, exportáveis via console/download/clipboard.
  * Server-side: logs em memória (ring buffer) + console formatado.
  *
- * Adaptado do MemorizaUltra (extrator notion) para o Deep Research App.
+ * Adaptado do MemorizaUltra (extrator notion) para o Âmago.AI.
  */
 
 // ============================================================
@@ -26,7 +26,7 @@ export interface DebugLogEntry {
 
 const STORAGE_KEY = 'DEEP_RESEARCH_DEBUG_LOGS';
 const MAX_ENTRIES = 1000;
-const APP_NAME = 'Deep Research';
+const APP_NAME = 'Âmago.AI';
 
 // ============================================================
 // UTILS

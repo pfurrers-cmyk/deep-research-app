@@ -2,6 +2,7 @@
 import { streamText } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { APP_CONFIG } from '@/config/defaults';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export const maxDuration = 300;
 
@@ -56,6 +57,7 @@ ${sourcesContext ? `## FONTES DISPONÍVEIS:\n${sourcesContext.slice(0, 5000)}` :
       messages,
       maxOutputTokens: 4000,
       abortSignal: AbortSignal.timeout(60_000),
+      providerOptions: getSafetyProviderOptions(modelId) as never,
     });
 
     return result.toTextStreamResponse();

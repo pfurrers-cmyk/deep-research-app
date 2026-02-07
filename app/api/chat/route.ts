@@ -3,6 +3,7 @@ import { streamText } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { getChatModels } from '@/config/models';
 import type { ChatRequest } from '@/lib/chat/types';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 const CHAT_SYSTEM_PROMPT = `Você é um assistente de IA avançado, versátil e prestativo. Responda sempre no idioma em que o usuário escrever.
 
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
       system,
       messages: aiMessages,
       abortSignal: request.signal,
+      providerOptions: getSafetyProviderOptions(model) as never,
     });
 
     return result.toTextStreamResponse();

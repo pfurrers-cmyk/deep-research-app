@@ -14,6 +14,7 @@ import { debug } from '@/lib/utils/debug-logger';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource } from '@/lib/research/types';
 import type { SSEWriter } from '@/lib/utils/streaming';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export interface MapReduceOptions {
   query: string;
@@ -95,6 +96,7 @@ export async function runMapReduceResearch(
         system: MAP_SYSTEM_PROMPT,
         prompt,
         abortSignal: AbortSignal.timeout(config.resilience.timeoutPerStageMs.synthesis),
+        providerOptions: getSafetyProviderOptions(mapModel.modelId) as never,
       });
 
       costTracker.addEntry(
@@ -149,6 +151,7 @@ export async function runMapReduceResearch(
       system: REDUCE_SYSTEM_PROMPT,
       prompt: reducePrompt,
       abortSignal: AbortSignal.timeout(config.resilience.timeoutPerStageMs.synthesis * 1.5),
+      providerOptions: getSafetyProviderOptions(reduceModel.modelId) as never,
     });
 
     reportText = text;

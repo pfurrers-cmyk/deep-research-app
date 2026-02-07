@@ -7,7 +7,7 @@ test.describe('Navegação', () => {
     await page.waitForLoadState('networkidle')
 
     // Header com nome do app
-    await expect(page.getByText('Deep Research')).toBeVisible()
+    await expect(page.getByText('Âmago.AI')).toBeVisible()
 
     // Input de pesquisa presente
     const textarea = page.locator('textarea').first()

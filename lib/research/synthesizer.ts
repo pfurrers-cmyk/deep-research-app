@@ -6,6 +6,7 @@ import { buildSynthesisPrompt } from '@/lib/ai/prompts/synthesis';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
 import { loadPreferences } from '@/lib/config/settings-store';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export async function synthesizeReport(
   query: string,
@@ -60,6 +61,7 @@ export async function synthesizeReport(
         abortSignal: AbortSignal.timeout(
           config.resilience.timeoutPerStageMs.synthesis
         ),
+        providerOptions: getSafetyProviderOptions(modelId) as never,
       });
 
       for await (const delta of result.textStream) {

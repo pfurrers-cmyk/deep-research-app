@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { debug } from '@/lib/utils/debug-logger';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export const maxDuration = 60;
 
@@ -43,6 +44,7 @@ export async function POST(
     const { object } = await generateObject({
       model: gateway('google/gemini-2.5-flash'),
       schema: reviewSchema,
+      providerOptions: getSafetyProviderOptions('google/gemini-2.5-flash') as never,
       system: `Você é um revisor acadêmico rigoroso. Sua tarefa é revisar um relatório de pesquisa gerado por IA e identificar problemas de qualidade.
 
 ## TIPOS DE PROBLEMAS A DETECTAR:
