@@ -64,12 +64,31 @@ export async function POST(req: Request) {
       imageUrl: dataUrl,
       model: imageModelId,
     });
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : 'Falha na geração';
-    debug.error('Generate', `Erro na geração: ${errMsg}`, { error: String(error) });
+  } catch (error: unknown) {
+    // Extract detailed error info from Gateway SDK errors
+    let errMsg = 'Falha na geração';
+    let statusCode = 500;
+    const errDetails: Record<string, unknown> = {};
+
+    if (error instanceof Error) {
+      errMsg = error.message;
+      errDetails.name = error.name;
+      errDetails.stack = error.stack?.split('\n').slice(0, 3).join(' | ');
+
+      // Gateway-specific error types have .type and .statusCode
+      const gErr = error as unknown as Record<string, unknown>;
+      if (gErr.type) errDetails.type = gErr.type;
+      if (gErr.statusCode) statusCode = gErr.statusCode as number;
+      if (gErr.response) errDetails.response = String(gErr.response).slice(0, 500);
+      if (gErr.cause) errDetails.cause = String(gErr.cause).slice(0, 500);
+    } else {
+      errMsg = String(error);
+    }
+
+    debug.error('Generate', `Erro na geração [${statusCode}]: ${errMsg}`, errDetails);
     return Response.json(
-      { error: errMsg },
-      { status: 500 }
+      { error: errMsg, details: errDetails },
+      { status: statusCode }
     );
   }
 }
