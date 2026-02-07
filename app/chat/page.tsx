@@ -51,7 +51,7 @@ export default function ChatPage() {
       {/* Main chat area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-2.5 bg-background/80 backdrop-blur-sm">
+        <div className="relative z-20 flex items-center justify-between border-b border-border/50 px-4 py-2.5 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2 min-w-0">
             <MessageSquare className="h-4 w-4 text-primary shrink-0" />
             <h2 className="truncate text-sm font-medium">

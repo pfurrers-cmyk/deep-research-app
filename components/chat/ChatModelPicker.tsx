@@ -96,7 +96,7 @@ export function ChatModelPicker({ value, onChange }: ChatModelPickerProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-80 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
+        <div className="absolute right-0 top-full z-[100] mt-1.5 w-80 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-border/50">
             <div className="relative">

@@ -1,15 +1,13 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '4.1.0',
-  buildTimestamp: '2026-02-07T19:38:02.403Z',
-  commitHash: 'a59b49c',
+  version: '4.1.1',
+  buildTimestamp: '2026-02-07T19:47:43.441Z',
+  commitHash: '157f482',
   branch: 'master',
   changelog: [
-    'Branding: App renomeado para Âmago.AI em toda a aplicação (header, exports, metadata, testes)',
-    'UI: Botão "Pesquisar" não sobrepõe mais elementos no input (padding corrigido)',
-    'Safety: Configurações de segurança permissivas (BLOCK_NONE) aplicadas automaticamente para modelos Google em todas as 10 chamadas LLM',
-    'Safety: Módulo config/safety-settings.ts com documentação de status por provedor (Google, Anthropic, OpenAI, etc.)',
-    'Safety: Integração centralizada via getSafetyProviderOptions() — sem necessidade de config manual por rota',
+    'UI: Dropdown do seletor de modelo no chat não é mais coberto pelas mensagens (z-index fix)',
+    'UI: Header do chat com z-20 para stacking context correto sobre a área de mensagens',
+    'UI: Padding do input de pesquisa aumentado para pr-52 (208px) — botões não sobrepõem mais o texto',
   ],
-  previousVersion: '4.0.0',
+  previousVersion: '4.1.0',
 };
