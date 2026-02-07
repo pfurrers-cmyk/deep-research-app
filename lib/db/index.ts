@@ -60,6 +60,28 @@ export interface StoredCostEntry {
   timestamp: string;
 }
 
+export interface StoredPrompt {
+  id: string;
+  prompt: string;
+  type: 'research' | 'image' | 'video';
+  model: string;
+  depth?: string;
+  domainPreset?: string | null;
+  researchId?: string;
+  timestamp: string;
+}
+
+export interface StoredGeneration {
+  id: string;
+  prompt: string;
+  model: string;
+  type: 'image' | 'video';
+  blobData: Blob;
+  mediaType: string;
+  sizeBytes: number;
+  timestamp: string;
+}
+
 // ============================================================
 // DATABASE
 // ============================================================
@@ -67,12 +89,20 @@ export interface StoredCostEntry {
 class ResearchDB extends Dexie {
   researches!: EntityTable<StoredResearch, 'id'>;
   costs!: EntityTable<StoredCostEntry, 'id'>;
+  prompts!: EntityTable<StoredPrompt, 'id'>;
+  generations!: EntityTable<StoredGeneration, 'id'>;
 
   constructor() {
     super('deep-research');
     this.version(1).stores({
       researches: 'id, query, title, depth, createdAt, favorite, confidenceLevel, *tags',
       costs: '++id, researchId, stage, modelId, timestamp',
+    });
+    this.version(2).stores({
+      researches: 'id, query, title, depth, createdAt, favorite, confidenceLevel, *tags',
+      costs: '++id, researchId, stage, modelId, timestamp',
+      prompts: 'id, type, model, timestamp, researchId',
+      generations: 'id, type, model, timestamp',
     });
   }
 }
@@ -159,7 +189,71 @@ export async function getResearchCount(): Promise<number> {
   return db.researches.count();
 }
 
+// ============================================================
+// PROMPT HISTORY
+// ============================================================
+
+export async function savePrompt(prompt: StoredPrompt): Promise<void> {
+  await db.prompts.put(prompt);
+}
+
+export async function getAllPrompts(): Promise<StoredPrompt[]> {
+  return db.prompts.orderBy('timestamp').reverse().toArray();
+}
+
+export async function getPromptsByType(type: StoredPrompt['type']): Promise<StoredPrompt[]> {
+  return db.prompts.where('type').equals(type).reverse().sortBy('timestamp');
+}
+
+export async function deletePrompt(id: string): Promise<void> {
+  await db.prompts.delete(id);
+}
+
+// ============================================================
+// GENERATED FILES (images/videos)
+// ============================================================
+
+export async function saveGeneration(gen: StoredGeneration): Promise<void> {
+  await db.generations.put(gen);
+}
+
+export async function getAllGenerations(): Promise<StoredGeneration[]> {
+  return db.generations.orderBy('timestamp').reverse().toArray();
+}
+
+export async function getGenerationsByType(type: 'image' | 'video'): Promise<StoredGeneration[]> {
+  return db.generations.where('type').equals(type).reverse().sortBy('timestamp');
+}
+
+export async function deleteGeneration(id: string): Promise<void> {
+  await db.generations.delete(id);
+}
+
+export async function getGenerationCount(): Promise<number> {
+  return db.generations.count();
+}
+
+// ============================================================
+// BULK OPERATIONS
+// ============================================================
+
 export async function clearAllData(): Promise<void> {
   await db.researches.clear();
   await db.costs.clear();
+  await db.prompts.clear();
+  await db.generations.clear();
+}
+
+export async function clearByType(type: 'researches' | 'prompts' | 'generations'): Promise<void> {
+  await db[type].clear();
+  if (type === 'researches') await db.costs.clear();
+}
+
+export async function deleteMultiple(table: 'researches' | 'prompts' | 'generations', ids: string[]): Promise<void> {
+  await db[table].bulkDelete(ids);
+  if (table === 'researches') {
+    for (const id of ids) {
+      await db.costs.where('researchId').equals(id).delete();
+    }
+  }
 }
