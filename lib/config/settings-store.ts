@@ -58,6 +58,10 @@ export interface UserPreferences {
     exportFormat: string;
   };
 
+  // Chat
+  defaultChatModel: string;
+  chatSystemPrompt: string;
+
   // Aparência
   defaultTheme: 'dark' | 'light' | 'system';
 
@@ -104,6 +108,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     },
     exportFormat: 'markdown',
   },
+  defaultChatModel: 'openai/gpt-4.1-mini',
+  chatSystemPrompt: '',
   defaultTheme: 'dark',
   updatedAt: new Date().toISOString(),
 };

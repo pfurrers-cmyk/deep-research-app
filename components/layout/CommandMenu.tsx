@@ -18,6 +18,7 @@ import {
   BookOpen,
   Settings,
   RotateCcw,
+  MessageSquare,
 } from 'lucide-react';
 import { db } from '@/lib/db';
 
@@ -76,9 +77,13 @@ export function CommandMenu() {
         <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
 
         <CommandGroup heading="Navegação">
+          <CommandItem onSelect={() => navigate('/chat')}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            <span>Pergunte à IA</span>
+          </CommandItem>
           <CommandItem onSelect={() => navigate('/')}>
             <Search className="mr-2 h-4 w-4" />
-            <span>Nova Pesquisa</span>
+            <span>Pesquisa Profunda</span>
           </CommandItem>
           <CommandItem onSelect={() => navigate('/generate')}>
             <ImageIcon className="mr-2 h-4 w-4" />

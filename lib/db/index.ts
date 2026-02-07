@@ -89,6 +89,25 @@ export interface StoredGeneration {
   timestamp: string;
 }
 
+export interface StoredChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  model?: string;
+  timestamp: string;
+  attachments?: { id: string; name: string; size: number; mimeType: string; extractedText?: string }[];
+  artifacts?: { id: string; type: string; title: string; content: string; language: string }[];
+}
+
+export interface StoredConversation {
+  id: string;
+  title: string;
+  messages: StoredChatMessage[];
+  model: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ============================================================
 // DATABASE
 // ============================================================
@@ -98,6 +117,7 @@ class ResearchDB extends Dexie {
   costs!: EntityTable<StoredCostEntry, 'id'>;
   prompts!: EntityTable<StoredPrompt, 'id'>;
   generations!: EntityTable<StoredGeneration, 'id'>;
+  conversations!: EntityTable<StoredConversation, 'id'>;
 
   constructor() {
     super('deep-research');
@@ -110,6 +130,13 @@ class ResearchDB extends Dexie {
       costs: '++id, researchId, stage, modelId, timestamp',
       prompts: 'id, type, model, timestamp, researchId',
       generations: 'id, type, model, timestamp',
+    });
+    this.version(3).stores({
+      researches: 'id, query, title, depth, createdAt, favorite, confidenceLevel, *tags',
+      costs: '++id, researchId, stage, modelId, timestamp',
+      prompts: 'id, type, model, timestamp, researchId',
+      generations: 'id, type, model, timestamp',
+      conversations: 'id, title, model, createdAt, updatedAt',
     });
   }
 }
@@ -248,11 +275,40 @@ export async function getGenerationCount(): Promise<number> {
 // BULK OPERATIONS
 // ============================================================
 
+// ============================================================
+// CONVERSATIONS CRUD
+// ============================================================
+
+export async function saveConversation(conv: StoredConversation): Promise<void> {
+  await db.conversations.put(conv);
+}
+
+export async function getConversation(id: string): Promise<StoredConversation | undefined> {
+  return db.conversations.get(id);
+}
+
+export async function getAllConversations(): Promise<StoredConversation[]> {
+  return db.conversations.orderBy('updatedAt').reverse().toArray();
+}
+
+export async function deleteConversation(id: string): Promise<void> {
+  await db.conversations.delete(id);
+}
+
+export async function updateConversationTitle(id: string, title: string): Promise<void> {
+  await db.conversations.update(id, { title, updatedAt: new Date().toISOString() });
+}
+
+export async function getConversationCount(): Promise<number> {
+  return db.conversations.count();
+}
+
 export async function clearAllData(): Promise<void> {
   await db.researches.clear();
   await db.costs.clear();
   await db.prompts.clear();
   await db.generations.clear();
+  await db.conversations.clear();
 }
 
 export async function clearByType(type: 'researches' | 'prompts' | 'generations'): Promise<void> {
@@ -260,7 +316,7 @@ export async function clearByType(type: 'researches' | 'prompts' | 'generations'
   if (type === 'researches') await db.costs.clear();
 }
 
-export async function deleteMultiple(table: 'researches' | 'prompts' | 'generations', ids: string[]): Promise<void> {
+export async function deleteMultiple(table: 'researches' | 'prompts' | 'generations' | 'conversations', ids: string[]): Promise<void> {
   await db[table].bulkDelete(ids);
   if (table === 'researches') {
     for (const id of ids) {

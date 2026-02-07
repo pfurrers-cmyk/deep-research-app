@@ -103,6 +103,8 @@ export function createMockPreferences(overrides: Partial<UserPreferences> = {}):
       advancedFilters: { recency: null, sourceTypes: [], languages: ['pt', 'en'], allowlist: [], blocklist: [] },
       exportFormat: 'markdown',
     },
+    defaultChatModel: 'openai/gpt-4.1-mini',
+    chatSystemPrompt: '',
     defaultTheme: 'dark',
     updatedAt: new Date().toISOString(),
     ...overrides,
