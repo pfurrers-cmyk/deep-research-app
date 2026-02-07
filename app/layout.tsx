@@ -5,6 +5,7 @@ import { AppProvider } from '@/components/providers/app-provider';
 import { Header } from '@/components/layout/Header';
 import { ArtifactsPanel } from '@/components/artifacts/ArtifactsPanel';
 import { FloatingLogButton } from '@/components/debug/FloatingLogButton';
+import { Toaster } from '@/components/ui/sonner';
 import { APP_CONFIG } from '@/config/defaults';
 import './globals.css';
 
@@ -39,6 +40,7 @@ export default function RootLayout({
             <main className="mx-auto max-w-5xl">{children}</main>
             <ArtifactsPanel />
             <FloatingLogButton />
+            <Toaster position="bottom-right" richColors closeButton />
           </AppProvider>
         </ThemeProvider>
       </body>
