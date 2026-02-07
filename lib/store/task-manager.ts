@@ -12,7 +12,7 @@ import type {
   ResearchMetadata,
   ResearchResponse,
 } from '@/lib/research/types';
-import { saveResearch, type StoredResearch } from '@/lib/db';
+import { saveResearch, savePrompt, saveGeneration, type StoredResearch, type StoredPrompt, type StoredGeneration } from '@/lib/db';
 import { loadPreferences } from '@/lib/config/settings-store';
 import { debug } from '@/lib/utils/debug-logger';
 
@@ -190,6 +190,18 @@ class TaskManager {
       if (prefs.stageModels.synthesis !== 'auto') customModelMap.synthesis = prefs.stageModels.synthesis;
 
       const sourceConfig = prefs.sourceConfig?.mode === 'manual' ? prefs.sourceConfig : undefined;
+
+      // Auto-save prompt to history
+      const promptEntry: StoredPrompt = {
+        id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        prompt: query,
+        type: 'research',
+        model: prefs.modelPreference,
+        depth,
+        domainPreset,
+        timestamp: new Date().toISOString(),
+      };
+      savePrompt(promptEntry).catch((e) => debug.warn('TaskManager', `Falha ao salvar prompt: ${e}`));
 
       const res = await fetch('/api/research', {
         method: 'POST',
@@ -369,6 +381,16 @@ class TaskManager {
     controller: AbortController
   ) {
     try {
+      // Auto-save generation prompt to history
+      const genPromptEntry: StoredPrompt = {
+        id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        prompt: prompt.trim(),
+        type: mode,
+        model,
+        timestamp: new Date().toISOString(),
+      };
+      savePrompt(genPromptEntry).catch((e) => debug.warn('TaskManager', `Falha ao salvar prompt de geração: ${e}`));
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -393,6 +415,20 @@ class TaskManager {
         const blob = await res.blob();
         resultUrl = URL.createObjectURL(blob);
         resultType = contentType.startsWith('video/') ? 'video' : 'image';
+
+        // Auto-save generated file to IndexedDB
+        const genEntry: StoredGeneration = {
+          id: `g_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          prompt: prompt.trim(),
+          model,
+          type: resultType,
+          blobData: blob,
+          mediaType: contentType,
+          sizeBytes: blob.size,
+          timestamp: new Date().toISOString(),
+        };
+        saveGeneration(genEntry).catch((e) => debug.warn('TaskManager', `Falha ao salvar geração: ${e}`));
+
         debug.info('TaskManager', `Geração concluída (binary): ${resultType}, model=${model}, ${blob.size} bytes, ${contentType}`);
       } else {
         // Legacy JSON response (base64 data URL) or error response that slipped through with 200
