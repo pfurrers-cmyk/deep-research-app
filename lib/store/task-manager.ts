@@ -374,8 +374,9 @@ class TaskManager {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(data.error || `HTTP ${res.status}`);
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        const details = errData.details ? ` | ${JSON.stringify(errData.details)}` : '';
+        throw new Error(`${errData.error || `HTTP ${res.status}`}${details}`);
       }
 
       const data = await res.json();
@@ -384,12 +385,12 @@ class TaskManager {
       } else {
         this._generate = { ...this._generate, status: 'complete', resultUrl: data.imageUrl, resultType: 'image' };
       }
-      debug.info('TaskManager', `Geração concluída: ${mode}`);
+      debug.info('TaskManager', `Geração concluída: ${mode}, model=${model}`);
       this._notify();
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      const msg = err instanceof Error ? err.message : 'Erro ao gerar';
-      debug.error('TaskManager', `Erro na geração: ${msg}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      debug.error('TaskManager', `Erro na geração: ${msg}`, { model, mode, prompt: prompt.slice(0, 60) });
       this._generate = { ...this._generate, status: 'error', error: msg };
       this._notify();
     }
