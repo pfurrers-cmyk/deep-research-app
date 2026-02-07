@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   BookOpen, Search, Star, Trash2, Clock, DollarSign, Database,
 } from 'lucide-react';
+import { useQueryState, parseAsBoolean, parseAsString } from 'nuqs';
 import { getAllResearches, deleteResearch, toggleFavorite, type StoredResearch } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,9 +34,9 @@ function formatDuration(ms: number): string {
 export default function LibraryPage() {
   const [researches, setResearches] = useState<StoredResearch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterFavorites, setFilterFavorites] = useState(false);
-  const [filterDepth, setFilterDepth] = useState('');
+  const [searchQuery, setSearchQuery] = useQueryState('q', parseAsString.withDefault(''));
+  const [filterFavorites, setFilterFavorites] = useQueryState('fav', parseAsBoolean.withDefault(false));
+  const [filterDepth, setFilterDepth] = useQueryState('depth', parseAsString.withDefault(''));
 
   const load = useCallback(async () => {
     try {
@@ -133,14 +134,14 @@ export default function LibraryPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => void setSearchQuery(e.target.value || null)}
               placeholder="Buscar pesquisas..."
               className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <Select
             value={filterDepth}
-            onChange={(e) => setFilterDepth(e.target.value)}
+            onChange={(e) => void setFilterDepth(e.target.value || null)}
             options={[
               { value: '', label: 'Todas profundidades' },
               ...Object.entries(DEPTH_LABELS).map(([k, v]) => ({ value: k, label: v })),
@@ -149,7 +150,7 @@ export default function LibraryPage() {
           <Button
             variant={filterFavorites ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilterFavorites(!filterFavorites)}
+            onClick={() => void setFilterFavorites(!filterFavorites || null)}
             className="h-10"
           >
             <Star className={`h-4 w-4 ${filterFavorites ? 'fill-current' : ''}`} />
