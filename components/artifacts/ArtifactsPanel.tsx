@@ -1,8 +1,8 @@
 // components/artifacts/ArtifactsPanel.tsx — Artifacts side panel (inspired by Claude Artifacts)
 'use client';
 
-import { useState, useMemo } from 'react';
-import { X, Code2, Eye, Download, ChevronLeft, ChevronRight, Copy, Check, FileText, Trash2 } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { X, Code2, Eye, Download, ChevronLeft, ChevronRight, Copy, Check, FileText, Trash2, GripVertical } from 'lucide-react';
 import { useAppStore } from '@/lib/store/app-store';
 import { cn } from '@/lib/utils';
 
@@ -19,11 +19,48 @@ const LANG_LABELS: Record<string, string> = {
   css: 'CSS',
 };
 
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 900;
+const DEFAULT_WIDTH = 560;
+
 export function ArtifactsPanel() {
   const { state, dispatch } = useAppStore();
   const { artifacts, activeArtifactId, artifactsPanelOpen } = state;
   const [viewMode, setViewMode] = useState<'code' | 'preview'>('preview');
   const [copied, setCopied] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(DEFAULT_WIDTH);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = panelWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [panelWidth]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = startX.current - e.clientX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta));
+      setPanelWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const activeArtifact = artifacts.find((a) => a.id === activeArtifactId);
   const currentVersion = activeArtifact?.versions[activeArtifact.currentVersionIndex];
@@ -66,7 +103,21 @@ export function ArtifactsPanel() {
   if (!artifactsPanelOpen || artifacts.length === 0) return null;
 
   return (
-    <div className="fixed right-0 top-0 z-40 flex h-full w-full max-w-[560px] flex-col border-l border-border bg-card shadow-2xl">
+    <div
+      className="fixed right-0 top-0 z-40 flex h-full flex-col border-l border-border bg-card shadow-2xl"
+      style={{ width: `${panelWidth}px` }}
+    >
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="absolute left-0 top-0 z-50 flex h-full w-2 cursor-col-resize items-center justify-center hover:bg-primary/10 transition-colors group"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Redimensionar painel"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors" />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
