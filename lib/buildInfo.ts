@@ -1,16 +1,17 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '2.0.0',
-  buildTimestamp: '2026-02-07T15:33:03.378Z',
-  commitHash: '6806d07',
+  version: '2.0.1',
+  buildTimestamp: '2026-02-07T15:39:32.676Z',
+  commitHash: 'b3e3b2c',
   branch: 'master',
   changelog: [
-    'Sprint 1: Textarea progressivo auto-resize + config piso/teto de fontes (auto/manual)',
-    'Sprint 2: Biblioteca 3 abas (Pesquisas/Imagens/Prompts) + auto-save IndexedDB v2 + bulk ops',
-    'Sprint 3: Organização por IA da biblioteca + chat pós-pesquisa multi-turno persistente',
-    'Sprint 4: Recomendação inteligente de modelos (3 tiers + calculadora IA via Gemini 2.5 Flash)',
-    'Sprint 5: Prompt Reverso PRO (10 categorias) + checklist verificado + correção automática',
-    'Sprint 6: Relatório final de avaliação com notas segmentadas',
+    'Fix: modelo inexistente google/imagen-4.0-fast-generate-001 removido do catálogo',
+    'Fix: import generateImage → experimental_generateImage (AI SDK 6.x)',
+    'Fix: image-only models agora usam aspectRatio em vez de size',
+    'Fix: novos modelos bfl/flux-2-pro e bfl/flux-2-flex adicionados',
+    'Fix: logs com timestamp completo (dd/mm hh:mm:ss), ordenação cronológica correta',
+    'Fix: botão copiar logs filtrados + copiar todos separados',
+    'Fix: Ctrl+A scoped funcional via document.activeElement',
   ],
-  previousVersion: '1.0.0',
+  previousVersion: '2.0.0',
 };

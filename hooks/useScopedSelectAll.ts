@@ -21,7 +21,7 @@ export function useScopedSelectAll() {
       if (!(e.key === 'a' && (e.ctrlKey || e.metaKey))) return;
       if (e.shiftKey || e.altKey) return;
 
-      const target = e.target as HTMLElement;
+      const target = (document.activeElement ?? e.target) as HTMLElement;
 
       // Native inputs already scope Ctrl+A to their own text
       if (
@@ -32,8 +32,9 @@ export function useScopedSelectAll() {
         return; // let browser handle
       }
 
-      // Walk up from document.activeElement (or event target) to find nearest scope
-      const scope = findScope(target);
+      // Walk up from activeElement first, then event target, to find nearest scope
+      let scope = findScope(target);
+      if (!scope) scope = findScope(e.target as HTMLElement);
       if (!scope) return; // no scope → let browser do default (select all page)
 
       e.preventDefault();

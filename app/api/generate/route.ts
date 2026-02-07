@@ -1,6 +1,6 @@
 // app/api/generate/route.ts — Image & Video generation API via AI Gateway
 import { gateway } from '@ai-sdk/gateway';
-import { generateImage, experimental_generateVideo } from 'ai';
+import { experimental_generateImage as generateImage, experimental_generateVideo } from 'ai';
 import { debug } from '@/lib/utils/debug-logger';
 
 export const maxDuration = 120;
@@ -51,10 +51,12 @@ export async function POST(req: Request) {
     // IMAGE GENERATION
     // ============================================================
     const imageModelId = model || 'bfl/flux-pro-1.1';
+    // Map size string to aspectRatio for image-only models
+    const aspectRatio = sizeToAspectRatio(size) as `${number}:${number}`;
     const result = await generateImage({
       model: gateway.image(imageModelId),
       prompt,
-      size: (size || '1024x1024') as `${number}x${number}`,
+      aspectRatio,
     });
 
     const image = result.image;
@@ -124,6 +126,21 @@ export async function POST(req: Request) {
       { status: statusCode }
     );
   }
+}
+
+// Map size string (e.g. "1024x1024") to aspectRatio (e.g. "1:1")
+function sizeToAspectRatio(size?: string): string | undefined {
+  if (!size) return '1:1';
+  const map: Record<string, string> = {
+    '1024x1024': '1:1',
+    '1792x1024': '16:9',
+    '1024x1792': '9:16',
+    '1536x1024': '3:2',
+    '1024x1536': '2:3',
+    '1280x720': '16:9',
+    '720x1280': '9:16',
+  };
+  return map[size] ?? '1:1';
 }
 
 // Map cryptic Gateway SDK errors to user-friendly messages

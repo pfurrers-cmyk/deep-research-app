@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bug, X, Download, Clipboard, Trash2, RefreshCw, Server, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bug, X, Download, Clipboard, Trash2, RefreshCw, Server, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import {
   getDebugLogs,
   clearDebugLogs,
   downloadDebugLogs,
   copyDebugLogsToClipboard,
+  exportDebugLogs,
   getLogsSummary,
   type DebugLogEntry,
 } from '@/lib/utils/debug-logger';
@@ -72,12 +73,21 @@ export function FloatingLogButton() {
       ? activeLogs
       : activeLogs.filter((l) => l.level === filterLevel);
 
-  const handleCopy = async () => {
+  const handleCopyAll = async () => {
     const ok = await copyDebugLogsToClipboard();
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleCopyFiltered = async () => {
+    try {
+      const text = exportDebugLogs(filtered);
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* silent */ }
   };
 
   const handleClear = () => {
@@ -134,9 +144,11 @@ export function FloatingLogButton() {
               <button onClick={() => { refresh(); fetchServerLogs(); }} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Atualizar">
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
-              <button onClick={handleCopy} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Copiar">
+              <button onClick={handleCopyFiltered} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Copiar logs visíveis">
+                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+              <button onClick={handleCopyAll} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Copiar todos os logs">
                 <Clipboard className="h-3.5 w-3.5" />
-                {copied && <span className="absolute -mt-6 rounded bg-green-600 px-1 text-[9px] text-white">OK</span>}
               </button>
               <button onClick={downloadDebugLogs} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Baixar .txt">
                 <Download className="h-3.5 w-3.5" />
@@ -201,11 +213,14 @@ export function FloatingLogButton() {
                 Nenhum log registrado
               </p>
             ) : (
-              [...filtered].reverse().map((entry, i) => (
+              filtered.map((entry, i) => (
                 <div key={i} className="border-b border-border/20 py-0.5 last:border-0">
                   <div className="flex items-start gap-1.5">
+                    <span className="shrink-0 text-muted-foreground/40">
+                      {i + 1}
+                    </span>
                     <span className="shrink-0 text-muted-foreground/50">
-                      {entry.timestamp.slice(11, 23)}
+                      {entry.timestamp}
                     </span>
                     <span className={`shrink-0 font-bold ${LEVEL_COLORS[entry.level] ?? ''}`}>
                       {entry.level.padEnd(5)}

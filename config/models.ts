@@ -326,10 +326,10 @@ export const MODELS: ModelDefinition[] = [
   { id: 'bfl/flux-kontext-pro', provider: 'bfl', name: 'FLUX Kontext Pro', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
   { id: 'bfl/flux-kontext-max', provider: 'bfl', name: 'FLUX Kontext Max', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
   { id: 'google/imagen-4.0-generate-001', provider: 'google', name: 'Imagen 4.0', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~8s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'google/imagen-4.0-fast-generate-001', provider: 'google', name: 'Imagen 4.0 Fast', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~4s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
   { id: 'google/imagen-4.0-ultra-generate-001', provider: 'google', name: 'Imagen 4.0 Ultra', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~12s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-2-pro', provider: 'bfl', name: 'FLUX 2 Pro', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~6s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
+  { id: 'bfl/flux-2-flex', provider: 'bfl', name: 'FLUX 2 Flex', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
   { id: 'recraft/recraft-v3', provider: 'recraft', name: 'Recraft V3', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~5s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
-  { id: 'recraft/recraft-v2', provider: 'recraft', name: 'Recraft V2', contextWindow: 0, maxOutput: 0, streaming: false, latency: '~4s', tps: '—', inputPricePer1M: 0, outputPricePer1M: 0, tier: 'image', capabilities: ['image-gen'] },
 
   // ================================================================
   // GERAÇÃO DE VÍDEO (IDs reais do AI Gateway — gateway.video())
