@@ -4,6 +4,7 @@ import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { MODEL_RECOMMENDATIONS, PRICING, TIER_LABELS } from '@/config/model-recommendations';
 import { debug } from '@/lib/utils/debug-logger';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export const maxDuration = 30;
 
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: gateway('google/gemini-2.5-flash'),
       schema: recommendationSchema,
+      providerOptions: getSafetyProviderOptions('google/gemini-2.5-flash') as never,
       system: `Você é um consultor de configuração de IA para pesquisas acadêmicas/profissionais. Analise o prompt do usuário e forneça recomendações para 3 perfis de configuração de modelos de IA.
 
 Modelos disponíveis por perfil:

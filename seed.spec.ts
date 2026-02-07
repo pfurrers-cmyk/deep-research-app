@@ -6,7 +6,7 @@ test('seed: app loads and is interactive', async ({ page }) => {
   await page.waitForLoadState('networkidle')
 
   // App loads with header
-  await expect(page.getByText('Deep Research')).toBeVisible()
+  await expect(page.getByText('Âmago.AI')).toBeVisible()
 
   // Search input is interactive
   const textarea = page.locator('textarea').first()

@@ -1,4 +1,4 @@
-# Deep Research App — Ações Proibidas
+# Âmago.AI — Ações Proibidas
 
 ## NUNCA fazer
 

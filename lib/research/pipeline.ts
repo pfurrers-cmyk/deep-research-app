@@ -16,6 +16,7 @@ import { runIterativeResearch } from '@/lib/research/iterative-research';
 import { resolveProcessingMode, getMapBatchSize, getModeOverhead } from '@/config/model-source-limits';
 import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
 import { debug } from '@/lib/utils/debug-logger';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type {
   ResearchRequest,
@@ -134,6 +135,7 @@ async function runPipeline(
       abortSignal: AbortSignal.timeout(
         config.resilience.timeoutPerStageMs.decomposition
       ),
+      providerOptions: getSafetyProviderOptions(decompositionModel.modelId) as never,
     });
 
     subQueries = object.subQueries

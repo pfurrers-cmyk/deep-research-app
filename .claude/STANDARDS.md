@@ -1,4 +1,4 @@
-# Deep Research App — Padrões de Código
+# Âmago.AI — Padrões de Código
 
 ## Naming Conventions
 

@@ -1,4 +1,4 @@
-# Code Review Guidelines — Deep Research App
+# Code Review Guidelines — Âmago.AI
 
 ## Stack
 - Next.js 16.1.6 (App Router)

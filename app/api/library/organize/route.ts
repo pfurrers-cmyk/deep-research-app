@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { debug } from '@/lib/utils/debug-logger';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export const maxDuration = 30;
 
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: gateway('google/gemini-2.5-flash'),
       schema: organizationSchema,
+      providerOptions: getSafetyProviderOptions('google/gemini-2.5-flash') as never,
       system: `Você é um assistente de organização de biblioteca de pesquisas. Organize as pesquisas em categorias claras e úteis. Cada pesquisa deve pertencer a exatamente uma categoria. Use nomes curtos e descritivos para as categorias. Forneça um emoji relevante para cada categoria.`,
       prompt: `Critério de organização: ${criterionPrompt}\n\nPesquisas para organizar:\n${itemsSummary}\n\nOrganize estas ${items.length} pesquisas em categorias relevantes.`,
     });

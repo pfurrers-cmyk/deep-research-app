@@ -15,6 +15,7 @@ import { debug } from '@/lib/utils/debug-logger';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource } from '@/lib/research/types';
 import type { SSEWriter } from '@/lib/utils/streaming';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 export interface IterativeResearchOptions {
   query: string;
@@ -125,6 +126,7 @@ export async function runIterativeResearch(
           system: ENRICH_SYSTEM_PROMPT,
           prompt,
           abortSignal: AbortSignal.timeout(config.resilience.timeoutPerStageMs.synthesis * 1.5),
+          providerOptions: getSafetyProviderOptions(enrichModel.modelId) as never,
         });
 
         enrichedReport = text;
@@ -172,6 +174,7 @@ export async function runIterativeResearch(
         system: VERIFICATION_SYSTEM_PROMPT,
         prompt: verifyPrompt,
         abortSignal: AbortSignal.timeout(config.resilience.timeoutPerStageMs.synthesis * 2),
+        providerOptions: getSafetyProviderOptions(verifyModel.modelId) as never,
       });
 
       costTracker.addEntry(

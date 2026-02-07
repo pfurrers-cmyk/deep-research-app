@@ -8,6 +8,7 @@ import {
 } from '@/lib/ai/prompts/relevance-evaluation';
 import type { AppConfig } from '@/config/defaults';
 import type { SearchResult, EvaluatedSource } from '@/lib/research/types';
+import { getSafetyProviderOptions } from '@/config/safety-settings';
 
 function getCredibilityTier(
   url: string,
@@ -85,6 +86,7 @@ export async function evaluateSources(
         schema: evaluationSchema,
         system,
         prompt,
+        providerOptions: getSafetyProviderOptions(modelSelection.modelId) as never,
       });
 
       if (object.diversityWarning) {
