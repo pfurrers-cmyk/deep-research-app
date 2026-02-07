@@ -56,6 +56,15 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border/50 bg-muted/30 text-xs text-muted-foreground hover:bg-muted transition-colors"
+            aria-label="Abrir paleta de comandos"
+          >
+            <Search className="w-3 h-3" />
+            <span>Buscar...</span>
+            <kbd className="ml-1.5 pointer-events-none rounded border bg-muted px-1 font-mono text-[10px]">⌘K</kbd>
+          </button>
           <VersionStamp />
           <ThemeToggle />
           {/* Mobile menu button */}
