@@ -134,6 +134,34 @@
   }
 }
 
+/* === REPORT TYPOGRAPHY === */
+.report-content {
+  max-width: 65ch;
+  margin: 0 auto;
+  font-size: clamp(0.9375rem, 0.85rem + 0.25vw, 1.0625rem);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+.report-content h2 {
+  font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.5rem);
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.75em;
+  letter-spacing: -0.02em;
+}
+
+.report-content h3 {
+  font-size: clamp(1.1rem, 1rem + 0.3vw, 1.25rem);
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.report-content p {
+  margin-bottom: 1.2em;
+}
+
 @layer base {
   * {
     @apply border-border;

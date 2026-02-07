@@ -124,10 +124,11 @@ export function MarkdownRenderer({
             <button
               key={i}
               onClick={() => onCitationClick?.(num)}
-              className="mx-0.5 inline-flex cursor-pointer items-baseline text-xs font-bold text-primary hover:underline"
+              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold cursor-pointer hover:bg-primary/25 transition-colors align-super -ml-0.5 mx-0.5"
               title={`Ver fonte ${num}`}
+              aria-label={`Citação ${num}`}
             >
-              [{num}]
+              {num}
             </button>
           );
         }
@@ -137,7 +138,7 @@ export function MarkdownRenderer({
   }
 
   return (
-    <div className="max-w-none">
+    <div className="report-content">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>

@@ -118,13 +118,27 @@ export function ReportViewer({
         ref={contentRef}
         className="max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card p-6 sm:p-8"
       >
-        <MarkdownRenderer
-          content={reportText}
-          totalSources={totalSources}
-          onCitationClick={handleCitationClick}
-        />
-        {isStreaming && (
-          <span className="inline-block h-5 w-1 animate-pulse bg-primary" />
+        {!reportText && isStreaming ? (
+          <div className="space-y-3 py-2" aria-busy="true" aria-label="Carregando relatório...">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-4 rounded-md animate-shimmer"
+                style={{ width: `${85 - (i % 4) * 15}%`, animationDelay: `${i * 100}ms` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <>
+            <MarkdownRenderer
+              content={reportText}
+              totalSources={totalSources}
+              onCitationClick={handleCitationClick}
+            />
+            {isStreaming && (
+              <span className="inline-block h-5 w-1 animate-pulse bg-primary" />
+            )}
+          </>
         )}
       </div>
 
