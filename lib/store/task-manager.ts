@@ -392,8 +392,12 @@ class TaskManager {
         resultType = contentType.startsWith('video/') ? 'video' : 'image';
         debug.info('TaskManager', `Geração concluída (binary): ${resultType}, model=${model}, ${blob.size} bytes, ${contentType}`);
       } else {
-        // Legacy JSON response (base64 data URL)
+        // Legacy JSON response (base64 data URL) or error response that slipped through with 200
         const data = await res.json();
+        if (data.error) {
+          // Error response disguised as 200 (Gateway SDK bug)
+          throw new Error(data.error);
+        }
         if (data.type === 'video') {
           resultUrl = data.videoUrl;
           resultType = 'video';

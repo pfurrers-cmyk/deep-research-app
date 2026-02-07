@@ -61,6 +61,14 @@ export async function POST(req: Request) {
     const mediaType = image.mediaType || 'image/png';
     const bytes = image.uint8Array;
 
+    if (!bytes || bytes.length === 0) {
+      debug.error('Generate', `Imagem vazia retornada pelo modelo ${imageModelId}`);
+      return Response.json(
+        { error: `Modelo ${imageModelId} retornou imagem vazia` },
+        { status: 502 }
+      );
+    }
+
     debug.timed('Generate', `Imagem gerada: ${imageModelId} (${bytes.length} bytes, ${mediaType})`, startTime);
     return new Response(Buffer.from(bytes), {
       headers: {
@@ -103,6 +111,9 @@ export async function POST(req: Request) {
     } else {
       errMsg = String(error);
     }
+
+    // NEVER return a success status code for errors — Gateway SDK sometimes has statusCode: 200 on errors
+    if (statusCode < 400) statusCode = 500;
 
     debug.error('Generate', `Erro na geração [${statusCode}]: ${errMsg}`, errDetails);
     return Response.json(
