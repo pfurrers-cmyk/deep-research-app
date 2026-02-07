@@ -33,13 +33,14 @@ export function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 sm:flex" aria-label="Navegação principal">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors',
                   isActive
@@ -71,6 +72,8 @@ export function Header() {
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="flex h-9 w-9 items-center justify-center rounded-md border border-input text-muted-foreground sm:hidden"
+            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -79,7 +82,7 @@ export function Header() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <nav className="flex flex-col border-t border-border bg-background px-4 py-2 sm:hidden">
+        <nav className="flex flex-col border-t border-border bg-background px-4 py-2 sm:hidden" aria-label="Navegação mobile">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
