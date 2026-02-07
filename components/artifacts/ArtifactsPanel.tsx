@@ -210,7 +210,7 @@ export function ArtifactsPanel() {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-auto">
+      <div data-select-scope="artifacts" tabIndex={0} className="flex-1 overflow-auto focus:outline-none">
         {!currentVersion ? (
           <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">Nenhum conteúdo</div>
         ) : viewMode === 'code' || !canPreview ? (

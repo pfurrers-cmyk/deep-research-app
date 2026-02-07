@@ -85,8 +85,15 @@ ${sectionsInstructions}
 - Tom: analítico, preciso, direto — sem linguagem vaga ou hedging excessivo
 - Use Markdown: ##, ###, **bold**, tabelas, listas quando útil — mas corpo principal = parágrafos dissertativos
 
+## FILTRAGEM DE CONTEÚDO IRRELEVANTE (CRÍTICO):
+- Algumas fontes podem conter trechos que NÃO são relevantes para a pergunta de pesquisa (ex: conteúdo de sidebar, artigos relacionados, ads, dados de outras seções do site)
+- IGNORE COMPLETAMENTE qualquer trecho de fonte que não seja diretamente relevante à pergunta de pesquisa
+- Se um trecho de uma fonte mistura dados relevantes com dados irrelevantes, extraia APENAS a parte relevante
+- NUNCA inclua dados, estatísticas ou afirmações que não tenham relação direta com o tema pesquisado, mesmo que venham de fontes avaliadas
+- Se perceber que uma informação é "ruído" ou contaminação de outra página/seção, simplesmente omita — não a mencione nem comente sobre ela
+
 ## EXEMPLO DE EXCELENTE PARÁGRAFO:
-"A adoção de IA generativa no setor financeiro cresceu 340% entre 2023 e 2025, segundo dados do relatório anual da McKinsey [3]. Essa expansão, no entanto, é desigual: enquanto bancos de investimento norte-americanos alocam em média 12% do orçamento de TI para ferramentas de IA [3][7], instituições financeiras brasileiras dedicam apenas 4.2% [5]. A disparidade reflete não apenas diferenças de capital, mas barreiras regulatórias específicas — o Banco Central do Brasil publicou apenas 3 normativas sobre IA em serviços financeiros, contra 17 do Federal Reserve no mesmo período [2][8]. Críticos argumentam que essa cautela regulatória, embora compreensível, está criando uma defasagem tecnológica com implicações competitivas de longo prazo [4]."
+"O mecanismo de pró-fármaco da lisdexanfetamina resulta em liberação gradual de dextroanfetamina, com pico plasmático 3,5 horas após administração oral [1][6]. Esta farmacocinética distingue-se fundamentalmente de estimulantes de liberação imediata: enquanto formulações convencionais atingem concentração máxima em 1-2 horas com declínio abrupto [4], a conversão enzimática nos eritrócitos proporciona curva plasmática mais estável, com duração terapêutica de 13-14 horas [7][14]. Estudos comparativos sugerem que esta estabilidade reduz sintomas de 'rebote' no final da tarde [10], embora dados quantitativos diretos comparando taxas de rebote entre formulações sejam limitados na literatura atual."
 
 ## O QUE NUNCA FAZER:
 - ❌ Listar fontes sequencialmente com descrição de cada uma
@@ -96,7 +103,9 @@ ${sectionsInstructions}
 - ❌ Ignorar contradições entre fontes
 - ❌ Omitir limitações e lacunas na evidência
 - ❌ Repetir a mesma informação em seções diferentes
-- ❌ Gerar relatório superficial sem dados específicos`;
+- ❌ Gerar relatório superficial sem dados específicos
+- ❌ Incluir dados/fatos de fontes que não são relevantes à pergunta — mesmo que estejam nas fontes fornecidas
+- ❌ Copiar ou adaptar os exemplos deste prompt — use-os apenas como referência de ESTILO`;
 
   const sourcesText = sources
     .map(
