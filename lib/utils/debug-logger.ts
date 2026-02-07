@@ -33,7 +33,13 @@ const APP_NAME = 'Deep Research';
 // ============================================================
 
 function getTimestamp(): string {
-  return new Date().toISOString().replace('T', ' ').slice(0, 23);
+  return new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3,
+  });
 }
 
 function getTimestampBRT(): string {
