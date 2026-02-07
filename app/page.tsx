@@ -169,7 +169,7 @@ export default function Home() {
       <div className="flex w-full max-w-3xl flex-col items-center gap-6">
         {/* Hero — only when idle */}
         {isIdle && (
-          <div className="flex flex-col items-center gap-3 pt-12 text-center">
+          <div className="flex flex-col items-center gap-3 pt-12 text-center animate-fade-in">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <Search className="h-8 w-8 text-primary" />
             </div>
