@@ -6,6 +6,7 @@ import {
   BookOpen, Search, Star, Trash2, Clock, DollarSign, Database,
 } from 'lucide-react';
 import { useQueryState, parseAsBoolean, parseAsString } from 'nuqs';
+import { toast } from 'sonner';
 import { getAllResearches, deleteResearch, toggleFavorite, type StoredResearch } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,18 +55,39 @@ export default function LibraryPage() {
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Excluir esta pesquisa permanentemente?')) return;
-    await deleteResearch(id);
+    const item = researches.find((r) => r.id === id);
+    if (!item) return;
+    // Optimistic removal
     setResearches((prev) => prev.filter((r) => r.id !== id));
+    toast.success('Pesquisa excluída', {
+      action: {
+        label: 'Desfazer',
+        onClick: () => setResearches((prev) => [...prev, item].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+      },
+    });
+    try {
+      await deleteResearch(id);
+    } catch {
+      setResearches((prev) => [...prev, item].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      toast.error('Falha ao excluir pesquisa');
+    }
   };
 
   const handleToggleFavorite = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await toggleFavorite(id);
+    // Optimistic toggle
     setResearches((prev) =>
       prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r))
     );
+    try {
+      await toggleFavorite(id);
+    } catch {
+      setResearches((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r))
+      );
+      toast.error('Falha ao atualizar favorito');
+    }
   };
 
   const filtered = researches.filter((r) => {
@@ -82,8 +104,28 @@ export default function LibraryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center px-4 py-20">
-        <p className="text-muted-foreground">Carregando biblioteca...</p>
+      <div className="px-4 py-8">
+        <div className="mx-auto max-w-3xl space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-6 rounded animate-shimmer" />
+            <div className="space-y-1.5">
+              <div className="h-6 w-32 rounded animate-shimmer" />
+              <div className="h-4 w-48 rounded animate-shimmer" />
+            </div>
+          </div>
+          <div className="h-10 w-full rounded-lg animate-shimmer" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/30 p-4 space-y-2">
+              <div className="h-5 w-3/4 rounded animate-shimmer" style={{ animationDelay: `${i * 100}ms` }} />
+              <div className="h-4 w-1/2 rounded animate-shimmer" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+              <div className="flex gap-3 mt-2">
+                <div className="h-3 w-16 rounded animate-shimmer" />
+                <div className="h-3 w-12 rounded animate-shimmer" />
+                <div className="h-3 w-20 rounded animate-shimmer" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
