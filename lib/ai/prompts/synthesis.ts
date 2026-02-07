@@ -11,7 +11,8 @@ export function buildSynthesisPrompt(
   sources: EvaluatedSource[],
   config: AppConfig,
   customPrompt?: string,
-  proSettings?: UserPreferences['pro']
+  proSettings?: UserPreferences['pro'],
+  tccSettings?: UserPreferences['tcc']
 ) {
   const { synthesis } = config.pipeline;
   const sectionLabels = synthesis.sectionLabels;
@@ -28,7 +29,6 @@ export function buildSynthesisPrompt(
   const researchMode = proSettings?.researchMode ?? 'standard';
 
   const detailOpts = config.pro?.detailLevel?.options?.[detailLevel];
-  const maxTokens = detailOpts?.maxTokens ?? synthesis.maxOutputTokens;
 
   if (customPrompt?.trim()) {
     const sourcesText = sources
@@ -83,6 +83,7 @@ export function buildSynthesisPrompt(
     contrarian: '\n\n## MODO CONTRÁRIO:\n- Apresente a visão majoritária E os contrapontos com peso igual\n- Estruture como "Ponto" e "Contraponto" em cada tópico\n- Não tome partido — apresente evidências para ambos os lados\n- Avalie a força da evidência para cada posição',
     meta_analysis: '\n\n## MODO META-ANÁLISE:\n- Trate as fontes como estudos individuais a serem sintetizados\n- Apresente métricas agregadas quando possível\n- Classifique fontes por qualidade metodológica\n- Identifique padrões e outliers\n- Inclua contagem de estudos que suportam cada conclusão',
     fact_check: '\n\n## MODO FACT-CHECK:\n- Para cada afirmação principal, emita um VEREDITO: ✅ Confirmado, ⚠️ Parcialmente verdadeiro, ❌ Falso, ❓ Não verificável\n- Cite as evidências específicas para cada veredito\n- Avalie a confiabilidade de cada fonte utilizada\n- Destaque contexto ausente ou distorcido',
+    tcc: buildTccModeInstruction(tccSettings),
   }[researchMode] ?? '';
 
   const system = `Você é um pesquisador sênior e analista de inteligência. ${reasoningInstruction}
@@ -136,7 +137,7 @@ ${sectionsInstructions}
 - Termos técnicos podem permanecer em inglês quando são padrão na área
 - ${styleInstruction}
 - Use Markdown: ##, ###, **bold**, tabelas, listas quando útil — mas corpo principal = parágrafos dissertativos
-- **Tamanho alvo**: aproximadamente ${maxTokens} tokens (${detailOpts?.pages ?? '~3 páginas'})
+- Gere o relatório com a extensão que a qualidade e profundidade da análise exigirem — sem limite de tamanho
 
 ## FILTRAGEM DE CONTEÚDO IRRELEVANTE (CRÍTICO):
 - Algumas fontes podem conter trechos que NÃO são relevantes para a pergunta de pesquisa (ex: conteúdo de sidebar, artigos relacionados, ads, dados de outras seções do site)
@@ -185,4 +186,138 @@ ${sourcesText}
 Agora escreva o relatório completo seguindo a estrutura obrigatória. Comece com ## Resumo Executivo.`;
 
   return { system, prompt };
+}
+
+function buildTccModeInstruction(tcc?: UserPreferences['tcc']): string {
+  const titulo = tcc?.titulo || '[Título do TCC]';
+  const autor = tcc?.autor || '[Autor]';
+  const instituicao = tcc?.instituicao || '[Instituição]';
+  const curso = tcc?.curso || '[Curso]';
+  const orientador = tcc?.orientador || '[Orientador]';
+  const cidade = tcc?.cidade || '[Cidade]';
+  const ano = tcc?.ano || new Date().getFullYear().toString();
+  const minFontes = tcc?.minFontes ?? 15;
+
+  return `
+
+## MODO TCC — TRABALHO DE CONCLUSÃO DE CURSO (ABNT)
+
+### FORMATAÇÃO ABNT (NBR 14724:2024)
+Gere o documento seguindo rigorosamente as normas ABNT para trabalhos acadêmicos.
+
+### ESTRUTURA OBRIGATÓRIA DO TCC:
+Ignore a estrutura de seções padrão acima. Em vez disso, use ESTA estrutura:
+
+**ELEMENTOS PRÉ-TEXTUAIS:**
+
+## CAPA
+<center>
+
+**${instituicao.toUpperCase()}**
+
+**${curso.toUpperCase()}**
+
+&nbsp;
+
+**${autor.toUpperCase()}**
+
+&nbsp;
+
+**${titulo.toUpperCase()}**
+
+&nbsp;
+
+${cidade}
+${ano}
+</center>
+
+## FOLHA DE ROSTO
+<center>
+
+**${autor.toUpperCase()}**
+
+&nbsp;
+
+**${titulo.toUpperCase()}**
+
+Trabalho de Conclusão de Curso apresentado ao ${curso} da ${instituicao}, como requisito parcial para obtenção do grau de bacharel.
+
+Orientador(a): ${orientador}
+
+${cidade}
+${ano}
+</center>
+
+## RESUMO
+Escreva um resumo de 150-500 palavras do trabalho, seguido de 3-5 palavras-chave separadas por ponto-e-vírgula.
+
+## ABSTRACT
+Traduza o resumo para inglês, seguido de Keywords.
+
+## SUMÁRIO
+Gere um sumário automático baseado nos headings do documento.
+
+---
+
+**ELEMENTOS TEXTUAIS:**
+
+## 1 INTRODUÇÃO
+Deve conter:
+- Contextualização do tema
+- Problema de pesquisa (formulado como pergunta)
+- Objetivos (geral e específicos)
+- Justificativa
+- Breve descrição da estrutura do trabalho
+
+## 2 REFERENCIAL TEÓRICO
+- Revisão de literatura estruturada por temas/conceitos
+- Mínimo de ${minFontes} referências bibliográficas
+- Cada subseção (2.1, 2.2, etc.) aborda um conceito ou autor relevante
+- Citações diretas (até 3 linhas) entre aspas com (AUTOR, ano, p. X)
+- Citações diretas longas (>3 linhas) em bloco recuado 4cm, sem aspas
+- Citações indiretas com (AUTOR, ano)
+
+## 3 METODOLOGIA
+- Tipo de pesquisa (exploratória, descritiva, explicativa)
+- Abordagem (qualitativa, quantitativa, mista)
+- Procedimentos de coleta de dados
+- Procedimentos de análise
+
+## 4 RESULTADOS E DISCUSSÃO
+- Apresentação dos resultados encontrados na pesquisa bibliográfica
+- Análise crítica confrontando autores e perspectivas
+- Tabelas e figuras quando pertinentes
+
+## 5 CONSIDERAÇÕES FINAIS
+- Retomada dos objetivos e verificação do alcance
+- Principais contribuições do trabalho
+- Limitações encontradas
+- Sugestões para trabalhos futuros
+
+---
+
+**ELEMENTOS PÓS-TEXTUAIS:**
+
+## REFERÊNCIAS
+Formate TODAS as referências segundo ABNT NBR 6023:2018:
+- Livros: SOBRENOME, Nome. **Título**: subtítulo. Edição. Cidade: Editora, ano.
+- Artigos: SOBRENOME, Nome. Título do artigo. **Nome do Periódico**, v. X, n. Y, p. Z-W, ano.
+- Sites: SOBRENOME, Nome. **Título da página**. Disponível em: URL. Acesso em: DD mês. AAAA.
+- Ordem alfabética por sobrenome do primeiro autor.
+
+### REGRAS DE CITAÇÃO ABNT:
+- Citação direta curta: "texto" (AUTOR, ano, p. X)
+- Citação direta longa (>3 linhas): bloco recuado, espaçamento simples, fonte menor
+- Citação indireta: Segundo Autor (ano), ... OU ... (AUTOR, ano).
+- Citação de citação (apud): (AUTOR ORIGINAL apud AUTOR QUE CITOU, ano)
+- Múltiplos autores: (AUTOR1; AUTOR2, ano) ou (AUTOR1 et al., ano) para 4+
+- Use PREFERENCIALMENTE as fontes fornecidas, mas formate-as no padrão ABNT
+
+### LINGUAGEM E ESTILO:
+- Linguagem impessoal (3ª pessoa ou voz passiva)
+- Tom formal e acadêmico
+- Evitar expressões coloquiais, gírias, primeira pessoa
+- Verbos no pretérito perfeito para resultados, presente para fundamentação teórica
+- Parágrafos com introdução temática → desenvolvimento → conclusão parcial
+- Conectivos acadêmicos: "Nesse sentido", "Conforme", "De acordo com", "Em contrapartida"`;
 }

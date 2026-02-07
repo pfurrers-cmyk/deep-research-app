@@ -301,6 +301,7 @@ export default function Home() {
             sourcesFound={research.sourcesFound}
             sourcesKept={research.sourcesKept}
             costUSD={research.costUSD}
+            sectionProgress={research.sectionProgress}
           />
         )}
 

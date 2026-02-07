@@ -1,5 +1,18 @@
 // lib/export/converters.ts — Export converters for multiple output formats
 import { debug } from '@/lib/utils/debug-logger';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  TableRow,
+  TableCell,
+  Table,
+  WidthType,
+  BorderStyle,
+} from 'docx';
 
 export interface ExportInput {
   reportText: string;
@@ -248,9 +261,210 @@ export function exportToJSON(input: ExportInput): ExportResult {
 }
 
 // ============================================================
+// DOCX (via docx npm package)
+// ============================================================
+export async function exportToDocx(input: ExportInput): Promise<ExportResult> {
+  const { reportText, query, metadata } = input;
+
+  const children: (Paragraph | Table)[] = [];
+
+  // Title
+  children.push(new Paragraph({
+    text: query,
+    heading: HeadingLevel.TITLE,
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 200 },
+  }));
+
+  // Metadata line
+  children.push(new Paragraph({
+    children: [
+      new TextRun({
+        text: `Gerado em: ${metadata?.generatedAt ?? new Date().toLocaleString('pt-BR')} | Modelo: ${metadata?.model ?? 'N/A'} | Âmago.AI`,
+        size: 18,
+        color: '888888',
+        italics: true,
+      }),
+    ],
+    spacing: { after: 400 },
+    alignment: AlignmentType.CENTER,
+  }));
+
+  // Parse markdown into docx paragraphs
+  const lines = reportText.split('\n');
+  let inTable = false;
+  let tableRows: string[][] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Table detection
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (trimmed.replace(/[|\-\s]/g, '').length === 0) continue; // separator row
+      const cells = trimmed.split('|').filter(Boolean).map((c) => c.trim());
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      tableRows.push(cells);
+      continue;
+    } else if (inTable) {
+      // Flush table
+      if (tableRows.length > 0) {
+        children.push(buildDocxTable(tableRows));
+      }
+      inTable = false;
+      tableRows = [];
+    }
+
+    // Empty line
+    if (!trimmed) {
+      children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      children.push(new Paragraph({
+        text: trimmed.replace(/^###\s+/, ''),
+        heading: HeadingLevel.HEADING_3,
+        spacing: { before: 200, after: 100 },
+      }));
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      children.push(new Paragraph({
+        text: trimmed.replace(/^##\s+/, ''),
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300, after: 150 },
+      }));
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      children.push(new Paragraph({
+        text: trimmed.replace(/^#\s+/, ''),
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+      }));
+      continue;
+    }
+
+    // Bullet points
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      children.push(new Paragraph({
+        children: parseInlineFormatting(trimmed.slice(2)),
+        bullet: { level: 0 },
+        spacing: { after: 60 },
+      }));
+      continue;
+    }
+
+    // Blockquotes
+    if (trimmed.startsWith('> ')) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: trimmed.slice(2), italics: true, color: '555555' })],
+        indent: { left: 720 },
+        spacing: { after: 100 },
+      }));
+      continue;
+    }
+
+    // Horizontal rule
+    if (trimmed === '---' || trimmed === '***') {
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      continue;
+    }
+
+    // Normal paragraph with inline formatting
+    children.push(new Paragraph({
+      children: parseInlineFormatting(trimmed),
+      spacing: { after: 120 },
+    }));
+  }
+
+  // Flush any remaining table
+  if (inTable && tableRows.length > 0) {
+    children.push(buildDocxTable(tableRows));
+  }
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
+        },
+      },
+      children,
+    }],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const uint8 = new Uint8Array(buffer);
+  const blob = new Blob([uint8], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+
+  return {
+    content: '',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: `research-${slugify(query)}.docx`,
+    blob,
+  };
+}
+
+function parseInlineFormatting(text: string): TextRun[] {
+  const runs: TextRun[] = [];
+  // Simple regex-based inline formatting: **bold**, *italic*, `code`, [N] citations
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[\d+\])/g);
+
+  for (const part of parts) {
+    if (!part) continue;
+    if (part.startsWith('**') && part.endsWith('**')) {
+      runs.push(new TextRun({ text: part.slice(2, -2), bold: true }));
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      runs.push(new TextRun({ text: part.slice(1, -1), italics: true }));
+    } else if (part.startsWith('`') && part.endsWith('`')) {
+      runs.push(new TextRun({ text: part.slice(1, -1), font: 'Courier New', size: 20 }));
+    } else if (/^\[\d+\]$/.test(part)) {
+      runs.push(new TextRun({ text: part, superScript: true, color: '3498db', size: 18 }));
+    } else {
+      runs.push(new TextRun({ text: part }));
+    }
+  }
+
+  return runs;
+}
+
+function buildDocxTable(rows: string[][]): Table {
+  const maxCols = Math.max(...rows.map((r) => r.length));
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: rows.map((cells, rowIdx) =>
+      new TableRow({
+        children: Array.from({ length: maxCols }, (_, i) =>
+          new TableCell({
+            children: [new Paragraph({
+              children: [new TextRun({
+                text: cells[i] ?? '',
+                bold: rowIdx === 0,
+                size: 20,
+              })],
+            })],
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+              left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+              right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            },
+          })
+        ),
+      })
+    ),
+  });
+}
+
+// ============================================================
 // MASTER EXPORT FUNCTION
 // ============================================================
-export function exportReport(format: string, input: ExportInput): ExportResult {
+export function exportReport(format: string, input: ExportInput): ExportResult | Promise<ExportResult> {
   debug.info('Export', `Exportando relatório como ${format}`, { query: input.query.slice(0, 50) });
 
   switch (format) {
@@ -260,6 +474,7 @@ export function exportReport(format: string, input: ExportInput): ExportResult {
     case 'podcast': return exportToPodcastScript(input);
     case 'social': return exportToSocialThread(input);
     case 'json': return exportToJSON(input);
+    case 'docx': return exportToDocx(input);
     default: return exportToMarkdown(input);
   }
 }

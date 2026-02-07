@@ -76,11 +76,12 @@ describe('PRO settings', () => {
     expect(fws).toEqual(['craap', 'sift', 'radar', 'custom'])
   })
 
-  it('APP_CONFIG.pro contém 6 research modes', () => {
+  it('APP_CONFIG.pro contém 7 research modes', () => {
     const modes = Object.keys(APP_CONFIG.pro.researchMode.options)
-    expect(modes.length).toBe(6)
+    expect(modes.length).toBe(7)
     expect(modes).toContain('fact_check')
     expect(modes).toContain('meta_analysis')
+    expect(modes).toContain('tcc')
   })
 
   it('reportSections required sections são executive_summary e sources', () => {
