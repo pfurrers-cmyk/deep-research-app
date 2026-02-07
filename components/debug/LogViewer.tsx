@@ -75,7 +75,7 @@ export function LogViewer() {
           <div className="flex items-center gap-2">
             <Bug className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle>Debug Logs</CardTitle>
+              <CardTitle>Logs de Depuração</CardTitle>
               <CardDescription>
                 {summary.total} entradas · {summary.errors} erros · {summary.warnings} avisos
               </CardDescription>

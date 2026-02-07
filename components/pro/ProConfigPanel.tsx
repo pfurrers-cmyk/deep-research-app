@@ -31,6 +31,7 @@ export function ProConfigPanel({ onClose, compact = false }: ProConfigPanelProps
   const [settings, setSettings] = useState<ProSettings>(() => loadPreferences().pro);
   const [expandedSection, setExpandedSection] = useState<string | null>(compact ? null : 'writingStyle');
   const [showPreview, setShowPreview] = useState<string | null>(null);
+  const [newDomain, setNewDomain] = useState('');
 
   const pro = APP_CONFIG.pro;
 
@@ -344,7 +345,6 @@ export function ProConfigPanel({ onClose, compact = false }: ProConfigPanelProps
   const renderAdvancedFilters = () => {
     const { advancedFilters: af } = pro;
     const filters = settings.advancedFilters;
-    const [newDomain, setNewDomain] = useState('');
 
     const addDomain = (list: 'allowlist' | 'blocklist') => {
       const domain = newDomain.trim().toLowerCase();
@@ -468,7 +468,7 @@ export function ProConfigPanel({ onClose, compact = false }: ProConfigPanelProps
               {filters.allowlist.map((d) => (
                 <span key={d} className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] text-green-500">
                   {d}
-                  <button onClick={() => removeDomain('allowlist', d)}><X className="h-2.5 w-2.5" /></button>
+                  <button onClick={() => removeDomain('allowlist', d)} aria-label={`Remover ${d} da allowlist`}><X className="h-2.5 w-2.5" /></button>
                 </span>
               ))}
             </div>
@@ -479,7 +479,7 @@ export function ProConfigPanel({ onClose, compact = false }: ProConfigPanelProps
               {filters.blocklist.map((d) => (
                 <span key={d} className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] text-red-500">
                   {d}
-                  <button onClick={() => removeDomain('blocklist', d)}><X className="h-2.5 w-2.5" /></button>
+                  <button onClick={() => removeDomain('blocklist', d)} aria-label={`Remover ${d} da blocklist`}><X className="h-2.5 w-2.5" /></button>
                 </span>
               ))}
             </div>

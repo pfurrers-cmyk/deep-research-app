@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Paperclip, Upload, Plus } from 'lucide-react';
+import { Paperclip, Upload, Plus, Camera } from 'lucide-react';
 import type { AttachmentFile, AttachmentConfig, AttachmentPurpose } from './types';
 import { DEFAULT_ATTACHMENT_CONFIG, PURPOSE_LABELS, PURPOSE_ICONS } from './types';
 import { AttachmentPreview } from './AttachmentPreview';
@@ -125,7 +125,11 @@ export function UniversalAttachment({
           role="region"
           aria-label="Área de upload de arquivos"
         >
-          <Upload className={cn('h-10 w-10', isDragging ? 'text-primary animate-pulse' : 'text-muted-foreground')} />
+          {placeholder?.includes('imagem') || placeholder?.includes('vídeo') ? (
+            <Camera className={cn('h-10 w-10', isDragging ? 'text-primary animate-pulse' : 'text-muted-foreground')} />
+          ) : (
+            <Upload className={cn('h-10 w-10', isDragging ? 'text-primary animate-pulse' : 'text-muted-foreground')} />
+          )}
           <div className="text-center">
             <p className="text-sm font-medium">
               {isDragging ? 'Solte os arquivos aqui' : placeholder ?? 'Arraste arquivos aqui ou clique para enviar'}

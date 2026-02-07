@@ -11,6 +11,9 @@ import {
 import { executeSearch } from '@/lib/research/search';
 import { evaluateSources } from '@/lib/research/evaluator';
 import { synthesizeReport } from '@/lib/research/synthesizer';
+import { runMapReduceResearch } from '@/lib/research/map-reduce';
+import { runIterativeResearch } from '@/lib/research/iterative-research';
+import { resolveProcessingMode, getMapBatchSize, getModeOverhead } from '@/config/model-source-limits';
 import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
 import { debug } from '@/lib/utils/debug-logger';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
@@ -339,42 +342,108 @@ async function runPipeline(
   }
 
   // =========================================================
-  // ETAPA 5: Síntese do Relatório (STREAMING)
+  // ETAPA 5: Resolução de Modo de Processamento
+  // =========================================================
+  const synthesisModel = selectModel(
+    'synthesis',
+    request.modelPreference,
+    depth,
+    config,
+    request.customModelMap
+  );
+  modelsUsed.push(synthesisModel.modelId);
+
+  const { mode: processingMode, effectiveSearchCount, effectiveSelectCount, clamped } =
+    resolveProcessingMode(synthesisModel.modelId, maxSourcesFetch, maxSourcesKeep);
+
+  const modeInfo = getModeOverhead(processingMode);
+  debug.info('Pipeline', `Modo de processamento: ${processingMode} (${modeInfo.label}), fontes=${evaluatedSources.length}, clamped=${clamped}`);
+
+  writer.writeEvent({
+    type: 'processing-mode',
+    mode: processingMode,
+    label: modeInfo.label,
+    costMultiplier: modeInfo.costMultiplier,
+    latencyMultiplier: modeInfo.latencyMultiplier,
+  });
+
+  // =========================================================
+  // ETAPA 6: Síntese do Relatório — Roteamento por Modo
   // =========================================================
   emitStage(writer, 'synthesizing', 'running', 0.7, config);
 
   let reportText = '';
   try {
-    const synthesisModel = selectModel(
-      'synthesis',
-      request.modelPreference,
-      depth,
-      config,
-      request.customModelMap
-    );
-    modelsUsed.push(synthesisModel.modelId);
-    debug.info('Pipeline', `Síntese: modelo=${synthesisModel.modelId}, fontes=${evaluatedSources.length}`);
     const synthStart = Date.now();
 
-    reportText = await synthesizeReport(
-      request.query,
-      evaluatedSources,
-      depth,
-      config,
-      (delta) => {
-        writer.writeEvent({ type: 'text-delta', text: delta });
-      },
-      request.attachments
-    );
+    if (processingMode === 'base') {
+      // ─── BASE: Single-pass synthesis (unchanged) ───
+      debug.info('Pipeline', `Síntese BASE: modelo=${synthesisModel.modelId}, fontes=${evaluatedSources.length}`);
 
-    costTracker.addEntry(
-      'synthesis',
-      synthesisModel.modelId,
-      synthesisModel.estimatedInputTokens,
-      synthesisModel.estimatedOutputTokens
-    );
+      reportText = await synthesizeReport(
+        request.query,
+        evaluatedSources,
+        depth,
+        config,
+        (delta) => {
+          writer.writeEvent({ type: 'text-delta', text: delta });
+        },
+        request.attachments
+      );
 
-    debug.timed('Pipeline', `Síntese concluída: ${reportText.length} caracteres`, synthStart);
+      costTracker.addEntry(
+        'synthesis',
+        synthesisModel.modelId,
+        synthesisModel.estimatedInputTokens,
+        synthesisModel.estimatedOutputTokens
+      );
+    } else if (processingMode === 'extended') {
+      // ─── EXTENDED: Map-Reduce ───
+      debug.info('Pipeline', `Síntese EXTENDED (Map-Reduce): fontes=${evaluatedSources.length}`);
+      const batchSize = getMapBatchSize(synthesisModel.modelId);
+
+      const mrResult = await runMapReduceResearch({
+        query: request.query,
+        sources: evaluatedSources,
+        batchSize,
+        depth,
+        config,
+        writer,
+        costTracker,
+        modelPreference: request.modelPreference,
+        customModelMap: request.customModelMap,
+        onTextDelta: (delta) => {
+          writer.writeEvent({ type: 'text-delta', text: delta });
+        },
+      });
+
+      reportText = mrResult.reportText;
+      modelsUsed.push(...mrResult.modelsUsed);
+    } else {
+      // ─── ULTRA: Iterative + Verification ───
+      debug.info('Pipeline', `Síntese ULTRA (Iterativo): fontes=${evaluatedSources.length}`);
+      const batchSize = getMapBatchSize(synthesisModel.modelId);
+
+      const iterResult = await runIterativeResearch({
+        query: request.query,
+        sources: evaluatedSources,
+        batchSize,
+        depth,
+        config,
+        writer,
+        costTracker,
+        modelPreference: request.modelPreference,
+        customModelMap: request.customModelMap,
+        onTextDelta: (delta) => {
+          writer.writeEvent({ type: 'text-delta', text: delta });
+        },
+      });
+
+      reportText = iterResult.reportText;
+      modelsUsed.push(...iterResult.modelsUsed);
+    }
+
+    debug.timed('Pipeline', `Síntese concluída (${processingMode}): ${reportText.length} caracteres`, synthStart);
     emitStage(writer, 'synthesizing', 'completed', 0.9, config);
   } catch (error) {
     debug.error('Pipeline', `Síntese falhou: ${error instanceof Error ? error.message : String(error)}`);
@@ -393,7 +462,7 @@ async function runPipeline(
   }
 
   // =========================================================
-  // ETAPA 6: Pós-processamento
+  // ETAPA 7: Pós-processamento
   // =========================================================
   emitStage(writer, 'post-processing', 'running', 0.92, config);
 
@@ -407,6 +476,7 @@ async function runPipeline(
     depth: depth,
     domainPreset: request.domainPreset,
     modelPreference: request.modelPreference,
+    processingMode,
     totalSources: searchResults.length,
     totalSourcesKept: evaluatedSources.length,
     totalSourcesFiltered: searchResults.length - evaluatedSources.length,
@@ -414,7 +484,7 @@ async function runPipeline(
     modelsUsed: [...new Set(modelsUsed)],
     createdAt: new Date(startTime).toISOString(),
     completedAt: new Date().toISOString(),
-    pipelineVersion: '1.0.0',
+    pipelineVersion: '2.0.0',
   };
 
   writer.writeEvent({ type: 'metadata', data: metadata });

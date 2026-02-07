@@ -28,9 +28,15 @@ const PIPELINE_STAGES = [
   'evaluating',
   'extracting',
   'synthesizing',
+  'map-batch',
+  'reduce',
+  'enrich',
+  'verify',
   'post-processing',
   'complete',
 ] as const;
+
+const EXTENDED_STAGES = new Set(['map-batch', 'reduce', 'enrich', 'verify']);
 
 const statusIcons = {
   pending: <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />,
@@ -128,10 +134,19 @@ export function ResearchProgress({
             {/* Pipeline stages */}
             {PIPELINE_STAGES.filter((s) => s !== 'complete').map((stageName) => {
               const stageStatus = getStageStatus(stageName, currentStage);
-              const label =
-                (strings.stages as Record<string, string>)[stageName] ?? stageName;
+              // Hide extended stages if they haven't been activated
+              if (EXTENDED_STAGES.has(stageName) && stageStatus === 'pending') return null;
+              const extendedLabels: Record<string, string> = {
+                'map-batch': 'MAP: Processando batches',
+                'reduce': 'REDUCE: Sintetizando resumos',
+                'enrich': 'Enriquecimento iterativo',
+                'verify': 'Verificação cruzada',
+              };
+              const label = extendedLabels[stageName]
+                ?? (strings.stages as Record<string, string>)[stageName]
+                ?? stageName;
               return (
-                <div key={stageName} className="flex gap-2.5 items-start">
+                <div key={stageName} className={cn("flex gap-2.5 items-start", EXTENDED_STAGES.has(stageName) && "pl-4")}>
                   <div className="mt-0.5 min-w-[16px] flex justify-center">
                     {statusIcons[stageStatus]}
                   </div>

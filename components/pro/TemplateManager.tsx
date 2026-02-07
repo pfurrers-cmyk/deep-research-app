@@ -95,10 +95,20 @@ export function TemplateManager({ onApplyTemplate }: TemplateManagerProps) {
   }, [newName, newDesc, newCategory, templates]);
 
   const deleteTemplate = useCallback((id: string) => {
+    const removed = templates.find((t) => t.id === id);
     const updated = templates.filter((t) => t.id !== id);
     setTemplates(updated);
     saveTemplatesStorage(updated);
-    toast.success('Template removido');
+    toast.success('Template removido', {
+      action: removed ? {
+        label: 'Desfazer',
+        onClick: () => {
+          const restored = [...updated, removed].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          setTemplates(restored);
+          saveTemplatesStorage(restored);
+        },
+      } : undefined,
+    });
   }, [templates]);
 
   const toggleFavorite = useCallback((id: string) => {

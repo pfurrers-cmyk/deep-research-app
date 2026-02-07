@@ -1,24 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useTheme } from 'next-themes';
 import { Settings, RotateCcw, Save, Check, Sparkles } from 'lucide-react';
 import { APP_CONFIG, type DepthPreset } from '@/config/defaults';
 import { useSettings } from '@/hooks/useSettings';
 import { MODELS } from '@/config/models';
+import { resolveProcessingMode, getAbsoluteMaxSources, getModeOverhead } from '@/config/model-source-limits';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ui/model-selector';
 import { CostEstimator } from '@/components/ui/cost-estimator';
 import { LogViewer } from '@/components/debug/LogViewer';
-import { ProConfigPanel } from '@/components/pro/ProConfigPanel';
-import { TemplateManager } from '@/components/pro/TemplateManager';
+const ProConfigPanel = lazy(() => import('@/components/pro/ProConfigPanel').then(m => ({ default: m.ProConfigPanel })));
+const TemplateManager = lazy(() => import('@/components/pro/TemplateManager').then(m => ({ default: m.TemplateManager })));
 import { BUILD_INFO } from '@/lib/buildInfo';
 
 export default function SettingsPage() {
   const { prefs, loaded, update, reset } = useSettings();
-  const { setTheme } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [saved, setSaved] = useState(false);
 
   // Local form state seeded from prefs
@@ -74,8 +75,26 @@ export default function SettingsPage() {
 
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center px-4 py-20">
-        <p className="text-muted-foreground">Carregando configurações...</p>
+      <div className="px-4 py-8">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-6 rounded bg-muted animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-6 w-40 rounded bg-muted animate-pulse" />
+              <div className="h-4 w-64 rounded bg-muted animate-pulse" />
+            </div>
+          </div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/30 p-5 space-y-3">
+              <div className="h-5 w-1/3 rounded bg-muted animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+              <div className="h-4 w-2/3 rounded bg-muted animate-pulse" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+              <div className="space-y-2 pt-2">
+                <div className="h-10 w-full rounded-lg bg-muted animate-pulse" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+                <div className="h-10 w-full rounded-lg bg-muted animate-pulse" style={{ animationDelay: `${i * 100 + 150}ms` }} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -115,8 +134,31 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Quick navigation TOC */}
+        <nav className="sticky top-14 z-30 -mx-1 flex flex-wrap gap-1 rounded-lg border border-border/50 bg-background/95 backdrop-blur-sm p-2" aria-label="Navegação rápida das configurações">
+          {[
+            { id: 'sec-pesquisa', label: 'Pesquisa' },
+            { id: 'sec-modelos', label: 'Modelos' },
+            { id: 'sec-prompts', label: 'Prompts' },
+            { id: 'sec-fontes', label: 'Fontes' },
+            { id: 'sec-aparencia', label: 'Aparência' },
+            { id: 'sec-pro', label: 'PRO' },
+            { id: 'sec-templates', label: 'Templates' },
+            { id: 'sec-sobre', label: 'Sobre' },
+            { id: 'sec-debug', label: 'Logs' },
+          ].map(({ id, label }) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+
         {/* Pesquisa */}
-        <Card>
+        <Card id="sec-pesquisa">
           <CardHeader>
             <CardTitle>Pesquisa</CardTitle>
             <CardDescription>
@@ -168,7 +210,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Modelos por Fase */}
-        <Card>
+        <Card id="sec-modelos">
           <CardHeader>
             <CardTitle>Modelos por Fase do Pipeline</CardTitle>
             <CardDescription>
@@ -210,7 +252,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Prompts Customizáveis */}
-        <Card>
+        <Card id="sec-prompts">
           <CardHeader>
             <CardTitle>Prompts Customizáveis</CardTitle>
             <CardDescription>
@@ -256,7 +298,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Fontes */}
-        <Card>
+        <Card id="sec-fontes">
           <CardHeader>
             <CardTitle>Fontes</CardTitle>
             <CardDescription>
@@ -284,56 +326,83 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {sourceConfig.mode === 'manual' && (
-              <div className="space-y-4 rounded-lg border border-border/50 bg-muted/10 p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Fontes a buscar</span>
-                    <span className="font-mono text-muted-foreground">{sourceConfig.fetchMin}–{sourceConfig.fetchMax}</span>
+            {sourceConfig.mode === 'manual' && (() => {
+              const synthModelId = stageModels.synthesis !== 'auto'
+                ? stageModels.synthesis
+                : APP_CONFIG.depth.presets[defaultDepth].synthesisModel;
+              const absMax = getAbsoluteMaxSources(synthModelId);
+              const { mode: resolvedMode } = resolveProcessingMode(synthModelId, sourceConfig.fetchMax, sourceConfig.keepMax);
+              const modeInfo = getModeOverhead(resolvedMode);
+              const badgeColors: Record<string, string> = {
+                green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                yellow: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+              };
+              return (
+                <div className="space-y-4 rounded-lg border border-border/50 bg-muted/10 p-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeColors[modeInfo.color] ?? badgeColors.green}`}
+                      title={modeInfo.description}>
+                      {resolvedMode === 'base' ? '⚡' : resolvedMode === 'extended' ? '🔀' : '🔄'} {modeInfo.labelShort}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ~{modeInfo.costMultiplier}× custo · ~{modeInfo.latencyMultiplier}× tempo
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-8">Mín</span>
-                    <input type="range" min={1} max={sourceConfig.fetchMax} value={sourceConfig.fetchMin}
-                      onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMin: Number(e.target.value) }))}
-                      className="flex-1 accent-primary" />
-                    <span className="text-xs text-muted-foreground w-8">Máx</span>
-                    <input type="range" min={sourceConfig.fetchMin} max={100} value={sourceConfig.fetchMax}
-                      onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMax: Number(e.target.value) }))}
-                      className="flex-1 accent-primary" />
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Fontes a buscar</span>
+                      <span className="font-mono text-muted-foreground">{sourceConfig.fetchMin}–{sourceConfig.fetchMax}
+                        <span className="text-xs opacity-60"> / máx {absMax.maxSearch}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-8">Mín</span>
+                      <input type="range" min={1} max={sourceConfig.fetchMax} value={sourceConfig.fetchMin}
+                        onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMin: Number(e.target.value) }))}
+                        className="flex-1 accent-primary" />
+                      <span className="text-xs text-muted-foreground w-8">Máx</span>
+                      <input type="range" min={sourceConfig.fetchMin} max={absMax.maxSearch} value={Math.min(sourceConfig.fetchMax, absMax.maxSearch)}
+                        onChange={(e) => setSourceConfig((s) => ({ ...s, fetchMax: Number(e.target.value) }))}
+                        className="flex-1 accent-primary" />
+                    </div>
                   </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Fontes a selecionar (pós-avaliação)</span>
+                      <span className="font-mono text-muted-foreground">{sourceConfig.keepMin}–{sourceConfig.keepMax}
+                        <span className="text-xs opacity-60"> / máx {absMax.maxSelect}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-8">Mín</span>
+                      <input type="range" min={1} max={sourceConfig.keepMax} value={sourceConfig.keepMin}
+                        onChange={(e) => setSourceConfig((s) => ({ ...s, keepMin: Number(e.target.value) }))}
+                        className="flex-1 accent-primary" />
+                      <span className="text-xs text-muted-foreground w-8">Máx</span>
+                      <input type="range" min={sourceConfig.keepMin} max={absMax.maxSelect} value={Math.min(sourceConfig.keepMax, absMax.maxSelect)}
+                        onChange={(e) => setSourceConfig((s) => ({ ...s, keepMax: Number(e.target.value) }))}
+                        className="flex-1 accent-primary" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    No modo manual, o pipeline respeitará os limites definidos independente da profundidade. Limites máximos baseados no modelo de síntese: <strong>{synthModelId.split('/')[1]}</strong>.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Fontes a selecionar (pós-avaliação)</span>
-                    <span className="font-mono text-muted-foreground">{sourceConfig.keepMin}–{sourceConfig.keepMax}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-8">Mín</span>
-                    <input type="range" min={1} max={sourceConfig.keepMax} value={sourceConfig.keepMin}
-                      onChange={(e) => setSourceConfig((s) => ({ ...s, keepMin: Number(e.target.value) }))}
-                      className="flex-1 accent-primary" />
-                    <span className="text-xs text-muted-foreground w-8">Máx</span>
-                    <input type="range" min={sourceConfig.keepMin} max={50} value={sourceConfig.keepMax}
-                      onChange={(e) => setSourceConfig((s) => ({ ...s, keepMax: Number(e.target.value) }))}
-                      className="flex-1 accent-primary" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  No modo manual, o pipeline respeitará os limites definidos independente da profundidade selecionada.
-                </p>
-              </div>
-            )}
+              );
+            })()}
 
             {sourceConfig.mode === 'auto' && (
               <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                No modo automático, a quantidade de fontes é determinada pela profundidade selecionada (Rápida: 8, Normal: 15, Profunda: 30, Exaustiva: 50).
+                No modo automático, a quantidade de fontes é determinada pela profundidade selecionada (Rápida: 8, Normal: 15, Profunda: 30, Exaustiva: 50). O modo de processamento (direto, map-reduce ou iterativo) é resolvido automaticamente.
               </p>
             )}
           </CardContent>
         </Card>
 
         {/* Aparência */}
-        <Card>
+        <Card id="sec-aparencia">
           <CardHeader>
             <CardTitle>Aparência</CardTitle>
             <CardDescription>
@@ -344,8 +413,8 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Tema</label>
               <Select
-                value={defaultTheme}
-                onChange={(e) => setDefaultTheme(e.target.value)}
+                value={currentTheme ?? defaultTheme}
+                onChange={(e) => { setDefaultTheme(e.target.value); setTheme(e.target.value); }}
                 options={[
                   { value: 'dark', label: 'Escuro' },
                   { value: 'light', label: 'Claro' },
@@ -357,7 +426,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Prompt Reverso PRO */}
-        <Card>
+        <Card id="sec-pro">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -368,23 +437,27 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ProConfigPanel />
+            <Suspense fallback={<div className="h-20 animate-pulse rounded-lg bg-muted" />}>
+              <ProConfigPanel />
+            </Suspense>
           </CardContent>
         </Card>
 
         {/* Templates */}
-        <Card>
+        <Card id="sec-templates">
           <CardHeader>
             <CardTitle>Templates de Pesquisa</CardTitle>
             <CardDescription>Salve e reutilize configurações PRO completas</CardDescription>
           </CardHeader>
           <CardContent>
-            <TemplateManager />
+            <Suspense fallback={<div className="h-20 animate-pulse rounded-lg bg-muted" />}>
+              <TemplateManager />
+            </Suspense>
           </CardContent>
         </Card>
 
         {/* Sobre */}
-        <Card>
+        <Card id="sec-sobre">
           <CardHeader>
             <CardTitle>Sobre</CardTitle>
           </CardHeader>
@@ -411,7 +484,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* Debug Logs */}
-        <LogViewer />
+        <div id="sec-debug">
+          <LogViewer />
+        </div>
       </div>
     </div>
   );

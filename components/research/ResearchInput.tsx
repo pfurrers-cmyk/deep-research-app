@@ -312,9 +312,10 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
         </div>
       )}
 
-      {/* Hint for "/" shortcut (only when idle and no query) */}
+      {/* Hint for "/" shortcut + depth indicator (only when idle and no query) */}
       {!query && !isLoading && !showConfig && (
         <p className="text-center text-xs text-muted-foreground/50">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground mr-2">{selectedPreset.icon} {selectedPreset.label}</span>
           Digite <kbd className="rounded border px-1 py-0.5 font-mono text-[10px]">/</kbd> para configurar profundidade e domínio
         </p>
       )}

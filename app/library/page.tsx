@@ -343,8 +343,8 @@ export default function LibraryPage() {
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col gap-3 sm:flex-row">
+        {/* Filters — only show when tab has items */}
+        {tabCounts[tab] > 0 && <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -376,7 +376,7 @@ export default function LibraryPage() {
               </Button>
             </>
           )}
-        </div>
+        </div>}
 
         {/* Bulk Actions Bar */}
         {selectedIds.size > 0 && (
@@ -393,7 +393,8 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {/* Clear section */}
+        {/* Clear section — only show when tab has items */}
+        {tabCounts[tab] > 0 && (
         <div className="flex items-center justify-between">
           <button
             onClick={() => {
@@ -414,6 +415,7 @@ export default function LibraryPage() {
             Limpar toda a aba
           </button>
         </div>
+        )}
 
         {/* Clear confirmation modal */}
         {showClearConfirm && (
@@ -440,7 +442,9 @@ export default function LibraryPage() {
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <BookOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
-                {researches.length === 0 ? 'Nenhuma pesquisa salva ainda.' : 'Nenhuma pesquisa encontrada com os filtros atuais.'}
+                {researches.length === 0 ? (
+                  <>Nenhuma pesquisa salva ainda.<br /><Link href="/" className="mt-2 inline-flex items-center gap-1 text-primary hover:underline">Fazer sua primeira pesquisa →</Link></>
+                ) : 'Nenhuma pesquisa encontrada com os filtros atuais.'}
               </p>
             </div>
           ) : (

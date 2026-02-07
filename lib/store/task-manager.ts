@@ -332,6 +332,18 @@ class TaskManager {
         this._autoSaveResearch(event.data);
         break;
 
+      case 'processing-mode':
+        this._research = {
+          ...r,
+          currentStage: {
+            stage: 'processing-mode',
+            status: 'running',
+            progress: r.currentStage?.progress ?? 0.55,
+            message: `Modo: ${event.label}`,
+          },
+        };
+        break;
+
       case 'error':
         this._research = {
           ...r,
