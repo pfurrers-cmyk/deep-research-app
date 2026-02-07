@@ -1,13 +1,17 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '0.5.1',
-  buildTimestamp: '2026-02-07T12:55:58.797Z',
-  commitHash: 'f78bde9',
+  version: '0.6.0',
+  buildTimestamp: '2026-02-07T13:08:02.097Z',
+  commitHash: '751755b',
   branch: 'master',
   changelog: [
-    'Captura detalhada de erros do Gateway: tipo, statusCode, response, cause',
-    'Erros reais agora visíveis no log flutuante (não mais "Falha na geração" genérico)',
-    'TaskManager propaga detalhes completos do erro da API para o client',
+    'Sistema completo de testagem automatizada: Vitest + Playwright + LLM Evals',
+    '44 unit tests passando: pricing, cost-estimator, settings-store, model-router, streaming, ai-sdk, utils',
+    'Test helpers: ai-mocks (MockLanguageModelV3), render-with-providers, msw-handlers, fixtures',
+    'E2E: Playwright com Page Objects (ResearchPage, LibraryPage, SettingsPage, GeneratePage)',
+    'LLM Evals: decomposition + synthesis quality scoring via LLM-as-Judge',
+    'CI/CD: GitHub Actions workflow (unit → e2e → evals)',
+    'Scripts: test, test:run, test:coverage, test:browser, test:e2e, test:evals, test:all',
   ],
-  previousVersion: '0.5.0',
+  previousVersion: '0.5.1',
 };
