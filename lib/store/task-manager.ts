@@ -374,18 +374,20 @@ class TaskManager {
       });
 
       if (!res.ok) {
+        // Error responses are still JSON
         const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
         const details = errData.details ? ` | ${JSON.stringify(errData.details)}` : '';
         throw new Error(`${errData.error || `HTTP ${res.status}`}${details}`);
       }
 
-      const data = await res.json();
-      if (data.type === 'video') {
-        this._generate = { ...this._generate, status: 'complete', resultUrl: data.videoUrl, resultType: 'video' };
-      } else {
-        this._generate = { ...this._generate, status: 'complete', resultUrl: data.imageUrl, resultType: 'image' };
-      }
-      debug.info('TaskManager', `Geração concluída: ${mode}, model=${model}`);
+      // Success responses are binary (image/video), not JSON
+      const contentType = res.headers.get('Content-Type') || '';
+      const genType = (res.headers.get('X-Generate-Type') || mode) as 'image' | 'video';
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      debug.info('TaskManager', `Geração concluída: ${genType}, model=${model}, ${blob.size} bytes, ${contentType}`);
+      this._generate = { ...this._generate, status: 'complete', resultUrl: blobUrl, resultType: genType };
       this._notify();
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
