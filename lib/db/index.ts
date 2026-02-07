@@ -5,6 +5,12 @@ import Dexie, { type EntityTable } from 'dexie';
 // STORED TYPES
 // ============================================================
 
+export interface StoredFollowUpMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
 export interface StoredResearch {
   id: string;
   query: string;
@@ -24,6 +30,7 @@ export interface StoredResearch {
   createdAt: string;
   completedAt: string;
   durationMs: number;
+  followUpMessages?: StoredFollowUpMessage[];
 }
 
 export interface StoredCitation {
@@ -146,6 +153,10 @@ export async function toggleFavorite(id: string): Promise<void> {
   if (research) {
     await db.researches.update(id, { favorite: !research.favorite });
   }
+}
+
+export async function updateFollowUpMessages(id: string, messages: StoredFollowUpMessage[]): Promise<void> {
+  await db.researches.update(id, { followUpMessages: messages });
 }
 
 export async function addTag(id: string, tag: string): Promise<void> {

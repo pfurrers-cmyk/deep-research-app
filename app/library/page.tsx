@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   BookOpen, Search, Star, Trash2, Clock, DollarSign, Database,
   Image as ImageIcon, MessageSquare, CheckSquare, Square, XCircle,
+  Sparkles, Loader2,
 } from 'lucide-react';
 import { useQueryState, parseAsBoolean, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
@@ -54,6 +55,10 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showOrganize, setShowOrganize] = useState(false);
+  const [organizeLoading, setOrganizeLoading] = useState(false);
+  const [organizeCriterion, setOrganizeCriterion] = useState('tema');
+  const [organizedCategories, setOrganizedCategories] = useState<Array<{ name: string; icon: string; researchIds: string[]; criteria: string }>>([]);
 
   const [activeTab, setActiveTab] = useQueryState('tab', parseAsString.withDefault('researches'));
   const [searchQuery, setSearchQuery] = useQueryState('q', parseAsString.withDefault(''));
@@ -132,6 +137,26 @@ export default function LibraryPage() {
       setSelectedIds(new Set());
       toast.success(`${count} item(ns) excluído(s)`);
     } catch { toast.error('Falha ao excluir itens'); }
+  };
+
+  const handleOrganize = async () => {
+    if (researches.length === 0) return;
+    setOrganizeLoading(true);
+    try {
+      const items = researches.map((r) => ({
+        id: r.id, title: r.title, query: r.query, tags: r.tags, depth: r.depth, createdAt: r.createdAt,
+      }));
+      const res = await fetch('/api/library/organize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, criterion: organizeCriterion }),
+      });
+      if (!res.ok) throw new Error('Falha na organização');
+      const data = await res.json();
+      setOrganizedCategories(data.categories);
+      toast.success(`${data.categories.length} categorias criadas`);
+    } catch { toast.error('Falha ao organizar biblioteca'); }
+    finally { setOrganizeLoading(false); }
   };
 
   const handleClearTab = async () => {
@@ -219,10 +244,81 @@ export default function LibraryPage() {
               </p>
             </div>
           </div>
-          <Link href="/">
-            <Button size="sm">Nova Pesquisa</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {tab === 'researches' && researches.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowOrganize(true)}>
+                <Sparkles className="h-3.5 w-3.5" />
+                Organizar com IA
+              </Button>
+            )}
+            <Link href="/">
+              <Button size="sm">Nova Pesquisa</Button>
+            </Link>
+          </div>
         </div>
+
+        {/* AI Organize Modal */}
+        {showOrganize && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-lg space-y-4 rounded-xl border border-border bg-card p-6 shadow-2xl">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Organizar Biblioteca com IA</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A IA analisará suas {researches.length} pesquisas e as organizará em categorias.
+              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Critério de organização</label>
+                <Select
+                  value={organizeCriterion}
+                  onChange={(e) => setOrganizeCriterion(e.target.value)}
+                  options={[
+                    { value: 'tema', label: '📚 Por tema/assunto' },
+                    { value: 'data', label: '📅 Por data/período' },
+                    { value: 'profundidade', label: '🔬 Por profundidade' },
+                    { value: 'dominio', label: '🌐 Por domínio/área' },
+                  ]}
+                />
+              </div>
+
+              {organizedCategories.length > 0 && (
+                <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-border/50 p-3">
+                  {organizedCategories.map((cat, i) => (
+                    <div key={i} className="rounded-lg bg-muted/30 p-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <span>{cat.icon}</span>
+                        <span>{cat.name}</span>
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono">{cat.researchIds.length}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{cat.criteria}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {cat.researchIds.map((rid) => {
+                          const r = researches.find((x) => x.id === rid);
+                          return r ? (
+                            <span key={rid} className="truncate rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary max-w-[200px]">
+                              {r.title}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setShowOrganize(false); setOrganizedCategories([]); }} className="flex-1">
+                  Fechar
+                </Button>
+                <Button size="sm" onClick={handleOrganize} disabled={organizeLoading} className="flex-1">
+                  {organizeLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {organizeLoading ? 'Organizando...' : 'Organizar'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-border">

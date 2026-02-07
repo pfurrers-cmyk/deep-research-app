@@ -7,7 +7,7 @@ import { useResearch } from '@/hooks/useResearch';
 import { useSettings } from '@/hooks/useSettings';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAppStore } from '@/lib/store/app-store';
-import { saveResearch, type StoredResearch } from '@/lib/db';
+import { saveResearch, updateFollowUpMessages, type StoredResearch } from '@/lib/db';
 import { ResearchInput } from '@/components/research/ResearchInput';
 import { ResearchProgress } from '@/components/research/ResearchProgress';
 import { ReportViewer } from '@/components/research/ReportViewer';
@@ -116,7 +116,8 @@ export default function Home() {
 
     const question = followUpInput.trim();
     setFollowUpInput('');
-    setFollowUpMessages((prev) => [...prev, { id: `fu-${Date.now()}`, role: 'user', content: question, timestamp: new Date().toISOString() }]);
+    const userMsg: FollowUpMessage = { id: `fu-${Date.now()}`, role: 'user', content: question, timestamp: new Date().toISOString() };
+    setFollowUpMessages((prev) => [...prev, userMsg]);
     setFollowUpLoading(true);
 
     try {
@@ -125,10 +126,15 @@ export default function Home() {
         .map((c) => `[${c.index}] ${c.title} — ${c.url}`)
         .join('\n');
 
+      // Send full message history for multi-turn context
+      const messageHistory = followUpMessages
+        .filter((m) => m.content.trim())
+        .map((m) => ({ role: m.role, content: m.content }));
+
       const res = await fetch(`/api/research/${research.response.id}/followup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, reportContext, sourcesContext }),
+        body: JSON.stringify({ question, reportContext, sourcesContext, messageHistory }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -139,8 +145,8 @@ export default function Home() {
       const decoder = new TextDecoder();
       let assistantText = '';
 
-      const assistantMsgId = `fa-${Date.now()}`;
-      setFollowUpMessages((prev) => [...prev, { id: assistantMsgId, role: 'assistant', content: '', timestamp: new Date().toISOString() }]);
+      const assistantMsg: FollowUpMessage = { id: `fa-${Date.now()}`, role: 'assistant', content: '', timestamp: new Date().toISOString() };
+      setFollowUpMessages((prev) => [...prev, assistantMsg]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -152,6 +158,13 @@ export default function Home() {
           return updated;
         });
       }
+
+      // Persist follow-up messages to IndexedDB
+      const allMsgs = [...followUpMessages, userMsg, { ...assistantMsg, content: assistantText }];
+      updateFollowUpMessages(
+        research.response!.id,
+        allMsgs.map((m) => ({ role: m.role, content: m.content, timestamp: m.timestamp }))
+      ).catch(() => {});
 
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {

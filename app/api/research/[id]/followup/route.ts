@@ -12,11 +12,12 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { question, reportContext, sourcesContext, model } = body as {
+    const { question, reportContext, sourcesContext, model, messageHistory } = body as {
       question: string;
       reportContext: string;
       sourcesContext?: string;
       model?: string;
+      messageHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
 
     if (!question?.trim()) {
@@ -37,12 +38,22 @@ ${sourcesContext ? `## FONTES DISPONÍVEIS:\n${sourcesContext.slice(0, 5000)}` :
 2. Se a informação não estiver no contexto, diga isso claramente.
 3. Use citações [N] quando referenciando fontes do relatório.
 4. Responda no mesmo idioma da pergunta.
-5. Seja conciso mas completo.`;
+5. Seja conciso mas completo.
+6. Mantenha coerência com respostas anteriores na conversa.`;
+
+    // Build messages array for multi-turn context
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    if (messageHistory?.length) {
+      for (const msg of messageHistory) {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+    }
+    messages.push({ role: 'user', content: question });
 
     const result = streamText({
       model: gateway(modelId),
       system: systemPrompt,
-      prompt: question,
+      messages,
       maxOutputTokens: 4000,
       abortSignal: AbortSignal.timeout(60_000),
     });
