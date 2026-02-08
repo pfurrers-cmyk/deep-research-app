@@ -6,6 +6,7 @@ import { X, Download, Loader2, Check, FileText, Presentation, Mic, MessageCircle
 import { exportReport, type ExportInput } from '@/lib/export/converters';
 import { APP_CONFIG } from '@/config/defaults';
 import { loadPreferences } from '@/lib/config/settings-store';
+import { debug } from '@/lib/utils/debug-logger';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -34,6 +35,18 @@ export function ExportModal({ open, onClose, reportText, query, citations, metad
   const [done, setDone] = useState<string | null>(null);
 
   const formats = APP_CONFIG.pro.exportFormats.options;
+
+  // Log export modal state on open
+  if (open) {
+    debug.info('ExportModal', 'Modal aberto', {
+      availableFormats: Object.keys(formats),
+      hasDocx: 'docx' in formats,
+      selectedFormat,
+      researchMode: prefs.pro.researchMode,
+      exportFormatPref: prefs.pro.exportFormat,
+      reportTextLength: reportText?.length ?? 0,
+    });
+  }
 
   const handleExport = useCallback(async () => {
     setExporting(true);

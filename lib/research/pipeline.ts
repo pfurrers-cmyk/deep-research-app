@@ -64,7 +64,14 @@ export function executePipeline(
   const costTracker = createCostTracker();
   const startTime = Date.now();
 
-  debug.info('Pipeline', `Pesquisa iniciada: "${request.query.slice(0, 80)}"`, { depth, researchId });
+  debug.info('Pipeline', `Pesquisa iniciada: "${request.query.slice(0, 80)}"`, {
+    depth,
+    researchId,
+    hasProSettings: !!request.proSettings,
+    hasTccSettings: !!request.tccSettings,
+    requestResearchMode: request.proSettings?.researchMode ?? '(não presente na request)',
+    requestCitationFormat: request.proSettings?.citationFormat ?? '(não presente)',
+  });
 
   const { stream, writer } = createSSEStream();
 

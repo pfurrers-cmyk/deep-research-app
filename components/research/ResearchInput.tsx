@@ -15,6 +15,7 @@ import type { AttachmentFile } from '@/components/shared/UniversalAttachment';
 import { APP_CONFIG, type DepthPreset, type DomainPreset } from '@/config/defaults';
 import { loadPreferences, savePreferences } from '@/lib/config/settings-store';
 import { resolveProcessingMode, getAbsoluteMaxSources, getModeOverhead } from '@/config/model-source-limits';
+import { debug } from '@/lib/utils/debug-logger';
 import { cn } from '@/lib/utils';
 
 type ConfigTab = 'general' | 'pipeline' | 'pro' | 'tcc' | 'templates';
@@ -50,10 +51,14 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
   }, []);
 
   const activateTccMode = useCallback(() => {
+    debug.info('TCC:UI', '🎓 ATIVANDO MODO TCC', {
+      previousMode: loadPreferences().pro.researchMode,
+      timestamp: new Date().toISOString(),
+    });
     setTccActive(true);
     setDepth('exaustiva' as DepthPreset);
     setDomainPreset('academico' as DomainPreset);
-    savePreferences({
+    const saved = savePreferences({
       pro: {
         ...loadPreferences().pro,
         writingStyle: 'academic',
@@ -63,10 +68,17 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
         reasoningLanguage: 'pt',
       },
     });
+    debug.info('TCC:UI', 'Preferências salvas após ativação TCC', {
+      researchMode: saved.pro.researchMode,
+      citationFormat: saved.pro.citationFormat,
+      detailLevel: saved.pro.detailLevel,
+      writingStyle: saved.pro.writingStyle,
+    });
     setConfigTab('tcc');
   }, []);
 
   const deactivateTccMode = useCallback(() => {
+    debug.info('TCC:UI', '🔴 DESATIVANDO MODO TCC');
     setTccActive(false);
     savePreferences({
       pro: {

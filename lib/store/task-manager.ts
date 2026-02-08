@@ -194,6 +194,20 @@ class TaskManager {
   ) {
     try {
       const prefs = loadPreferences();
+      debug.info('TaskManager', 'Preferências carregadas (client-side)', {
+        researchMode: prefs.pro.researchMode,
+        writingStyle: prefs.pro.writingStyle,
+        citationFormat: prefs.pro.citationFormat,
+        detailLevel: prefs.pro.detailLevel,
+        exportFormat: prefs.pro.exportFormat,
+        tccTitulo: prefs.tcc.titulo || '(vazio)',
+        tccAutor: prefs.tcc.autor || '(vazio)',
+        tccNivel: prefs.tcc.nivelAcademico || '(vazio)',
+        tccTipoPesquisa: prefs.tcc.tipoPesquisa || '(vazio)',
+        tccMinFontes: prefs.tcc.minFontes,
+        tccMinPaginas: prefs.tcc.minPaginas,
+        enabledSections: prefs.tcc.enabledSections,
+      });
       const customModelMap: Record<string, string> = {};
       // Check for AI-recommended models from sessionStorage (set by ModelRecommendationModal)
       const recommendedModels = typeof sessionStorage !== 'undefined'
@@ -222,18 +236,34 @@ class TaskManager {
       };
       savePrompt(promptEntry).catch((e) => debug.warn('TaskManager', `Falha ao salvar prompt: ${e}`));
 
+      const requestBody = {
+        query,
+        depth,
+        domainPreset,
+        modelPreference: prefs.modelPreference,
+        customModelMap: Object.keys(customModelMap).length > 0 ? customModelMap : undefined,
+        sourceConfig,
+        attachments: attachments?.length ? attachments : undefined,
+        // Pass user preferences to server so TCC mode, citations, etc. work
+        proSettings: prefs.pro,
+        tccSettings: prefs.tcc,
+      };
+
+      debug.info('TaskManager', 'REQUEST BODY enviado ao /api/research', {
+        query: query.slice(0, 80),
+        depth,
+        domainPreset,
+        researchMode: prefs.pro.researchMode,
+        hasProSettings: !!requestBody.proSettings,
+        hasTccSettings: !!requestBody.tccSettings,
+        proResearchMode: requestBody.proSettings?.researchMode,
+        proCitationFormat: requestBody.proSettings?.citationFormat,
+      });
+
       const res = await fetch('/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          depth,
-          domainPreset,
-          modelPreference: prefs.modelPreference,
-          customModelMap: Object.keys(customModelMap).length > 0 ? customModelMap : undefined,
-          sourceConfig,
-          attachments: attachments?.length ? attachments : undefined,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
@@ -264,9 +294,16 @@ class TaskManager {
 
           try {
             const event = JSON.parse(data) as PipelineEvent;
+            debug.debug('TaskManager', `SSE event: ${event.type}`, {
+              type: event.type,
+              ...(event.type === 'stage' ? { stage: (event as any).stage, status: (event as any).status, progress: (event as any).progress } : {}),
+              ...(event.type === 'text-delta' ? { textLen: ((event as any).text || '').length } : {}),
+              ...(event.type === 'section-progress' ? { sectionId: (event as any).sectionId, sectionStatus: (event as any).status } : {}),
+              ...(event.type === 'error' ? { error: (event as any).error } : {}),
+            });
             this._processResearchEvent(event);
-          } catch {
-            // Skip malformed
+          } catch (parseErr) {
+            debug.warn('TaskManager', `SSE parse error: ${parseErr}`, { rawData: data.slice(0, 200) });
           }
         }
       }
