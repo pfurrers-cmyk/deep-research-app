@@ -1,6 +1,6 @@
 // lib/export/converters.ts — Export converters for multiple output formats
 import { debug } from '@/lib/utils/debug-logger';
-import { loadPreferences } from '@/lib/config/settings-store';
+import { loadPreferences, type UserPreferences } from '@/lib/config/settings-store';
 import { exportToDocxAbnt } from '@/lib/export/docx-abnt';
 import {
   Document,
@@ -21,6 +21,8 @@ export interface ExportInput {
   query: string;
   citations?: Array<{ index: number; title: string; url: string; domain: string }>;
   metadata?: { generatedAt?: string; model?: string; depth?: string; costUSD?: number };
+  researchMode?: string;
+  tccConfig?: UserPreferences['tcc'];
 }
 
 export interface ExportResult {
@@ -478,12 +480,13 @@ export function exportReport(format: string, input: ExportInput): ExportResult |
     case 'json': return exportToJSON(input);
     case 'docx': {
       // Use ABNT-formatted DOCX when TCC mode is active
-      const exportPrefs = loadPreferences();
-      if (exportPrefs.pro.researchMode === 'tcc') {
+      const effectiveMode = input.researchMode ?? loadPreferences().pro.researchMode;
+      const effectiveTcc = input.tccConfig ?? loadPreferences().tcc;
+      if (effectiveMode === 'tcc') {
         return exportToDocxAbnt({
           reportText: input.reportText,
           query: input.query,
-          tccConfig: exportPrefs.tcc,
+          tccConfig: effectiveTcc,
         }).then((abntBlob) => ({
           content: '',
           mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

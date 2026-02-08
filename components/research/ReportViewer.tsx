@@ -255,17 +255,17 @@ export function ReportViewer({
       )}
 
       {/* Metadata bar */}
-      {metadata && !isStreaming && (
+      {metadata?.modelsUsed?.length && !isStreaming && (
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            {metadata.durationMs < 60000
-              ? `${(metadata.durationMs / 1000).toFixed(1)}s`
-              : `${(metadata.durationMs / 60000).toFixed(1)}min`}
+            {(metadata.durationMs ?? 0) < 60000
+              ? `${((metadata.durationMs ?? 0) / 1000).toFixed(1)}s`
+              : `${((metadata.durationMs ?? 0) / 60000).toFixed(1)}min`}
           </div>
           <div className="flex items-center gap-1.5">
             <Database className="h-3.5 w-3.5" />
-            {metadata.totalSourcesKept} {strings.labels.sources}
+            {metadata.totalSourcesKept ?? 0} {strings.labels.sources}
           </div>
           <div className="flex items-center gap-1.5">
             <DollarSign className="h-3.5 w-3.5" />
@@ -274,7 +274,7 @@ export function ReportViewer({
               : 'N/A'}
           </div>
           <div className="text-xs">
-            Modelos: {metadata.modelsUsed.join(', ')}
+            Modelos: {metadata.modelsUsed?.join(', ') ?? 'N/A'}
           </div>
         </div>
       )}
@@ -333,7 +333,7 @@ export function ReportViewer({
         }))}
         metadata={{
           generatedAt: metadata?.createdAt,
-          model: metadata?.modelsUsed?.[metadata.modelsUsed.length - 1],
+          model: metadata?.modelsUsed?.[metadata.modelsUsed!.length - 1],
           depth: metadata?.depth,
           costUSD: response?.cost?.totalCostUSD,
         }}

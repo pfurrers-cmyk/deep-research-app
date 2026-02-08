@@ -54,7 +54,7 @@ export function ExportModal({ open, onClose, reportText, query, citations, metad
     setDone(null);
 
     try {
-      const input: ExportInput = { reportText, query, citations, metadata };
+      const input: ExportInput = { reportText, query, citations, metadata, researchMode: prefs.pro.researchMode, tccConfig: prefs.tcc };
       const rawResult = exportReport(selectedFormat, input);
       const result = rawResult instanceof Promise ? await rawResult : rawResult;
 
@@ -85,7 +85,7 @@ export function ExportModal({ open, onClose, reportText, query, citations, metad
 
   const handleCopyToClipboard = useCallback(async () => {
     try {
-      const input: ExportInput = { reportText, query, citations, metadata };
+      const input: ExportInput = { reportText, query, citations, metadata, researchMode: prefs.pro.researchMode, tccConfig: prefs.tcc };
       const rawResult = exportReport(selectedFormat, input);
       const result = rawResult instanceof Promise ? await rawResult : rawResult;
       await navigator.clipboard.writeText(result.content);

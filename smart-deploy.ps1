@@ -95,6 +95,8 @@ Write-Host "  -> Arquivos alterados"  -ForegroundColor Gray
 # ============================================================
 Write-Host "[5/9] Commit: $CommitMessage"  -ForegroundColor Yellow
 git commit -m $CommitMessage 2>&1 | Out-Null
+Write-Host "  -> git diff --stat HEAD~1:" -ForegroundColor Gray
+git diff --stat HEAD~1
 
 # ============================================================
 # [6/9] BRANCH + PUSH

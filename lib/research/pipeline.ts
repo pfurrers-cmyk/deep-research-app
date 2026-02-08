@@ -404,13 +404,11 @@ async function runPipeline(
   // =========================================================
   const synthesizerMode = requestResearchMode === 'tcc' ? 'tcc' as const : 'standard' as const;
   writer.writeEvent({
-    type: 'metadata',
-    data: {
-      synthesizer: synthesizerMode,
-      researchMode: requestResearchMode,
-      proSettingsReceived: !!request.proSettings,
-      tccSettingsReceived: !!request.tccSettings,
-    } as ResearchMetadata,
+    type: 'pipeline-meta',
+    synthesizer: synthesizerMode,
+    researchMode: requestResearchMode,
+    proSettingsReceived: !!request.proSettings,
+    tccSettingsReceived: !!request.tccSettings,
   });
   debug.info('Pipeline', `Pipeline meta: synthesizer=${synthesizerMode}, proSettings=${!!request.proSettings}, tccSettings=${!!request.tccSettings}`);
 

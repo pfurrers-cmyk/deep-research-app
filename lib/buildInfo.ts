@@ -1,10 +1,16 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '5.1.0',
-  buildTimestamp: '2026-02-08T15:46:02.510Z',
-  commitHash: 'd5bc7dd',
+  version: '5.1.1',
+  buildTimestamp: '2026-02-08T17:25:34.352Z',
+  commitHash: '290739d',
   branch: 'master',
   changelog: [
+    // ── v5.1.1 (PATCH) ── Fix crash metadata parcial + defesas
+    'CRASH FIX: Evento pipeline-meta separado do metadata — não sobrescreve mais ResearchMetadata com objeto parcial',
+    'CRASH FIX: ReportViewer com guards defensivos (metadata?.modelsUsed?.length, optional chains em durationMs/totalSourcesKept)',
+    'Export: researchMode e tccConfig propagados via ExportInput (não depende mais só de loadPreferences em converters.ts)',
+    'Deploy: smart-deploy.ps1 agora imprime git diff --stat HEAD~1 após commit para transparência nos gate reports',
+
     // ── v5.1.0 (MINOR) ── Fix TCC mode + melhorias deploy
     'TCC Fix: Propagação end-to-end de proSettings/tccSettings via parâmetros (não mais localStorage no servidor)',
     'TCC Fix: synthesizer.ts recebe proSettings/tccSettings, cria effectivePro/effectiveTcc para routing correto',
@@ -139,5 +145,5 @@ export const BUILD_INFO = {
     'FASE 10: Polimento (focus-visible rings, fade-in animations)',
     'Fix: geração de imagem — statusCode < 400 forçado a 500, validação bytes vazios',
   ],
-  previousVersion: '5.0.0',
+  previousVersion: '5.1.0',
 };
