@@ -12,6 +12,22 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    debug.info('API:Research', 'REQUEST RECEBIDO no servidor', {
+      hasQuery: !!body.query,
+      depth: body.depth,
+      domainPreset: body.domainPreset,
+      modelPreference: body.modelPreference,
+      hasProSettings: !!body.proSettings,
+      hasTccSettings: !!body.tccSettings,
+      proResearchMode: body.proSettings?.researchMode ?? '(não enviado)',
+      proCitationFormat: body.proSettings?.citationFormat ?? '(não enviado)',
+      proWritingStyle: body.proSettings?.writingStyle ?? '(não enviado)',
+      tccTitulo: body.tccSettings?.titulo ?? '(não enviado)',
+      tccNivel: body.tccSettings?.nivelAcademico ?? '(não enviado)',
+      hasAttachments: !!(body.attachments?.length),
+      bodyKeys: Object.keys(body),
+    });
+
     const request: ResearchRequest = {
       query: body.query ?? '',
       depth: (body.depth ?? 'normal') as DepthPreset,
@@ -22,17 +38,23 @@ export async function POST(req: Request) {
       customModelMap: body.customModelMap,
       sourceConfig: body.sourceConfig,
       attachments: body.attachments,
+      proSettings: body.proSettings,
+      tccSettings: body.tccSettings,
     };
 
     if (!request.query.trim()) {
-      debug.warn('Research', 'Query vazia recebida');
+      debug.warn('API:Research', 'Query vazia recebida');
       return Response.json(
         { error: 'Query is required' },
         { status: 400 }
       );
     }
 
-    debug.info('Research', `Nova pesquisa: "${request.query.slice(0, 80)}"`, { depth: request.depth, model: request.modelPreference });
+    debug.info('API:Research', `Nova pesquisa montada: "${request.query.slice(0, 80)}"`, {
+      depth: request.depth,
+      model: request.modelPreference,
+      researchMode: request.proSettings?.researchMode ?? 'N/A (sem proSettings)',
+    });
     const { stream } = executePipeline(request);
 
     return createSSEResponse(stream);

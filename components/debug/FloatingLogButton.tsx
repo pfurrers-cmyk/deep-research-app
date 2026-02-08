@@ -31,8 +31,11 @@ export function FloatingLogButton() {
   const [expanded, setExpanded] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
 
-  const isSettingsPage = pathname === '/settings';
-  const showFab = isSettingsPage || errorCount > 0 || open;
+  const [filterModule, setFilterModule] = useState<string>('ALL');
+  const [modules, setModules] = useState<string[]>([]);
+
+  // ALWAYS visible — essential for diagnostics
+  const showFab = true;
 
   const refresh = useCallback(() => {
     const clientLogs = getDebugLogs();
@@ -73,10 +76,49 @@ export function FloatingLogButton() {
   }, []);
 
   const activeLogs = source === 'client' ? logs : serverLogs;
-  const filtered =
-    filterLevel === 'ALL'
-      ? activeLogs
-      : activeLogs.filter((l) => l.level === filterLevel);
+  const filtered = activeLogs.filter((l) => {
+    if (filterLevel !== 'ALL' && l.level !== filterLevel) return false;
+    if (filterModule !== 'ALL' && l.module !== filterModule) return false;
+    return true;
+  });
+
+  // Update available modules when logs change
+  useEffect(() => {
+    const allLogs = [...logs, ...serverLogs];
+    const mods = [...new Set(allLogs.map((l) => l.module))].sort();
+    setModules(mods);
+  }, [logs, serverLogs]);
+
+  /** Export logs with optional filters as structured JSON for prompt reverse */
+  const handleExportStructured = useCallback(() => {
+    const allClient = getDebugLogs();
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      clientLogs: allClient,
+      serverLogs: serverLogs,
+      summary: {
+        totalClient: allClient.length,
+        totalServer: serverLogs.length,
+        errors: allClient.filter(l => l.level === 'ERROR').length + serverLogs.filter(l => l.level === 'ERROR').length,
+        warnings: allClient.filter(l => l.level === 'WARN').length + serverLogs.filter(l => l.level === 'WARN').length,
+        modules: [...new Set([...allClient, ...serverLogs].map(l => l.module))],
+      },
+      filtered: {
+        level: filterLevel,
+        module: filterModule,
+        entries: filtered,
+      },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `amago-debug-full_${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [serverLogs, filtered, filterLevel, filterModule]);
 
   const handleCopyAll = async () => {
     const ok = await copyDebugLogsToClipboard();
@@ -160,6 +202,9 @@ export function FloatingLogButton() {
               <button onClick={downloadDebugLogs} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Baixar .txt">
                 <Download className="h-3.5 w-3.5" />
               </button>
+              <button onClick={handleExportStructured} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Exportar JSON completo (cliente+servidor+filtros)">
+                <Server className="h-3.5 w-3.5 text-green-400" />
+              </button>
               <button onClick={handleClear} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Limpar logs">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -208,8 +253,16 @@ export function FloatingLogButton() {
               <option value="INFO">Info</option>
               <option value="DEBUG">Debug</option>
             </select>
+            <select
+              value={filterModule}
+              onChange={(e) => setFilterModule(e.target.value)}
+              className="rounded-md border border-input bg-card px-1.5 py-1 text-[11px] max-w-[120px]"
+            >
+              <option value="ALL">Módulos</option>
+              {modules.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
             <span className="text-[10px] text-muted-foreground">
-              {filtered.length} de {activeLogs.length}
+              {filtered.length}/{activeLogs.length}
             </span>
           </div>
 

@@ -65,6 +65,44 @@ export interface ResearchRequest {
     beforeDate?: string;
   };
   attachments?: ResearchAttachment[];
+  proSettings?: {
+    writingStyle?: string;
+    detailLevel?: string;
+    reasoningLanguage?: string;
+    citationFormat?: string;
+    evaluationFramework?: string;
+    researchMode?: string;
+    enabledSections?: string[];
+    sectionOrder?: string[];
+    advancedFilters?: {
+      recency?: null | 'day' | 'week' | 'month' | 'year';
+      sourceTypes?: string[];
+      languages?: string[];
+      allowlist?: string[];
+      blocklist?: string[];
+    };
+    exportFormat?: string;
+  };
+  tccSettings?: {
+    titulo?: string;
+    autor?: string;
+    instituicao?: string;
+    curso?: string;
+    orientador?: string;
+    cidade?: string;
+    ano?: string;
+    minFontes?: number;
+    minPaginas?: number;
+    tipoPesquisa?: string;
+    areaConhecimento?: string;
+    abordagem?: string;
+    nivelAcademico?: string;
+    dedicatoria?: string;
+    agradecimentos?: string;
+    epigrafe?: string;
+    epigrafeAutor?: string;
+    enabledSections?: string[];
+  };
 }
 
 // ============================================================

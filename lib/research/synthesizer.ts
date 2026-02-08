@@ -7,6 +7,7 @@ import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
 import { loadPreferences } from '@/lib/config/settings-store';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
+import { debug } from '@/lib/utils/debug-logger';
 import { shouldUseMultiSection, synthesizeBySection, type SectionProgress } from '@/lib/research/section-synthesizer';
 import { synthesizeTcc } from '@/lib/research/tcc-synthesizer';
 
@@ -21,10 +22,28 @@ export async function synthesizeReport(
 ): Promise<string> {
   const prefs = loadPreferences();
 
+  debug.info('Synthesizer', 'ROTEAMENTO DE SÍNTESE', {
+    researchMode: prefs.pro.researchMode,
+    isTcc: prefs.pro.researchMode === 'tcc',
+    detailLevel: prefs.pro.detailLevel,
+    citationFormat: prefs.pro.citationFormat,
+    writingStyle: prefs.pro.writingStyle,
+    sourceCount: sources.length,
+    isServer: typeof window === 'undefined',
+    NOTE: typeof window === 'undefined'
+      ? 'SERVIDOR: loadPreferences() retorna DEFAULTS (localStorage indisponível)'
+      : 'CLIENTE: loadPreferences() lê localStorage',
+  });
+
   // TCC mode uses dedicated TCC synthesizer with ABNT structure
   if (prefs.pro.researchMode === 'tcc') {
+    debug.info('Synthesizer', '✅ ROTA TCC ATIVADA — usando synthesizeTcc()');
     return synthesizeTcc(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
   }
+
+  debug.info('Synthesizer', '❌ ROTA TCC NÃO ATIVADA — usando sintetizador padrão', {
+    reason: `researchMode='${prefs.pro.researchMode}' (!= 'tcc')`,
+  });
 
   // Check if multi-section synthesis should be used for non-TCC
   if (shouldUseMultiSection(prefs.pro.researchMode, prefs.pro.detailLevel, sources.length)) {
