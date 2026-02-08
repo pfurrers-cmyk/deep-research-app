@@ -1,8 +1,8 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
   version: '5.0.0',
-  buildTimestamp: '2026-02-07T22:54:12.580Z',
-  commitHash: 'a41781d',
+  buildTimestamp: '2026-02-08T11:41:21.596Z',
+  commitHash: 'eb6d395',
   branch: 'master',
   changelog: [
     // ── v5.0.0 (MAJOR) ──

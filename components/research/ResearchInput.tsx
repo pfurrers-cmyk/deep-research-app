@@ -494,6 +494,8 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
                         Desativar
                       </button>
                     </div>
+                    {/* Dados do trabalho */}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Dados do trabalho</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">Título do TCC</label>
@@ -533,10 +535,90 @@ export function ResearchInput({ onSubmit, isLoading, onCancel, initialDepth = 'n
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-xs font-medium text-muted-foreground">Mín. de fontes:</label>
-                      <input type="number" min={5} max={100} value={tccConfig.minFontes} onChange={(e) => updateTccConfig({ minFontes: Number(e.target.value) })}
-                        className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm text-center" />
+
+                    {/* Configuração metodológica */}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pt-2">Configuração metodológica</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Área do conhecimento</label>
+                        <input type="text" value={tccConfig.areaConhecimento} onChange={(e) => updateTccConfig({ areaConhecimento: e.target.value })}
+                          placeholder="Ex: Ciências Sociais, Direito, Educação..." className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Nível acadêmico</label>
+                        <select value={tccConfig.nivelAcademico} onChange={(e) => updateTccConfig({ nivelAcademico: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm">
+                          <option value="graduacao">Graduação (TCC)</option>
+                          <option value="especializacao">Especialização (Monografia)</option>
+                          <option value="mestrado">Mestrado (Dissertação)</option>
+                          <option value="doutorado">Doutorado (Tese)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Tipo de pesquisa</label>
+                        <select value={tccConfig.tipoPesquisa} onChange={(e) => updateTccConfig({ tipoPesquisa: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm">
+                          <option value="revisao_bibliografica">Revisão bibliográfica</option>
+                          <option value="revisao_sistematica">Revisão sistemática</option>
+                          <option value="estudo_caso">Estudo de caso</option>
+                          <option value="pesquisa_campo">Pesquisa de campo</option>
+                          <option value="pesquisa_documental">Pesquisa documental</option>
+                          <option value="pesquisa_acao">Pesquisa-ação</option>
+                          <option value="pesquisa_historica">Pesquisa histórica</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Abordagem</label>
+                        <select value={tccConfig.abordagem} onChange={(e) => updateTccConfig({ abordagem: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm">
+                          <option value="qualitativa">Qualitativa</option>
+                          <option value="quantitativa">Quantitativa</option>
+                          <option value="mista">Mista (quali-quanti)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Parâmetros */}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pt-2">Parâmetros</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Mín. fontes</label>
+                        <input type="number" min={5} max={100} value={tccConfig.minFontes} onChange={(e) => updateTccConfig({ minFontes: Number(e.target.value) })}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-center" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Mín. páginas</label>
+                        <input type="number" min={20} max={200} value={tccConfig.minPaginas} onChange={(e) => updateTccConfig({ minPaginas: Number(e.target.value) })}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-center" />
+                      </div>
+                    </div>
+
+                    {/* Elementos opcionais */}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pt-2">Elementos opcionais (pré-textuais)</p>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Dedicatória <span className="text-muted-foreground/60">(deixe vazio para omitir)</span></label>
+                        <input type="text" value={tccConfig.dedicatoria} onChange={(e) => updateTccConfig({ dedicatoria: e.target.value })}
+                          placeholder="Ex: Aos meus pais, pelo apoio incondicional." className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Agradecimentos <span className="text-muted-foreground/60">(deixe vazio para omitir)</span></label>
+                        <textarea value={tccConfig.agradecimentos} onChange={(e) => updateTccConfig({ agradecimentos: e.target.value })}
+                          placeholder="Ex: Agradeço ao meu orientador, à UNIFESP..." rows={2}
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm resize-none" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-medium text-muted-foreground">Epígrafe <span className="text-muted-foreground/60">(citação)</span></label>
+                          <input type="text" value={tccConfig.epigrafe} onChange={(e) => updateTccConfig({ epigrafe: e.target.value })}
+                            placeholder="Ex: A justiça atrasada não é justiça..." className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Autor da epígrafe</label>
+                          <input type="text" value={tccConfig.epigrafeAutor} onChange={(e) => updateTccConfig({ epigrafeAutor: e.target.value })}
+                            placeholder="Rui Barbosa" className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}

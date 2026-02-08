@@ -17,6 +17,7 @@ import { resolveProcessingMode, getMapBatchSize, getModeOverhead } from '@/confi
 import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
 import { debug } from '@/lib/utils/debug-logger';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
+import { loadPreferences } from '@/lib/config/settings-store';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type {
   ResearchRequest,
@@ -202,6 +203,29 @@ async function runPipeline(
         domainFilters = (domainConfig as { searchDomainFilter: string[] }).searchDomainFilter;
         languageFilters = (domainConfig as { searchLanguageFilter: string[] }).searchLanguageFilter;
       }
+    }
+
+    // TCC mode: enhance with academic domains for higher source quality
+    const pipelinePrefs = loadPreferences();
+    if (pipelinePrefs.pro.researchMode === 'tcc') {
+      const academicDomains = [
+        'scielo.br', 'scholar.google.com', 'periodicos.capes.gov.br',
+        'bdtd.ibict.br', 'repositorio.usp.br', 'repositorio.unicamp.br',
+        'repositorio.ufc.br', 'repositorio.ufmg.br', 'repositorio.unb.br',
+        'lume.ufrgs.br', 'teses.usp.br', 'redalyc.org',
+        'dialnet.unirioja.es', 'jstor.org', 'researchgate.net',
+        'academia.edu', 'springer.com', 'wiley.com',
+        'doi.org', 'arxiv.org', 'pubmed.ncbi.nlm.nih.gov',
+      ];
+      if (domainFilters?.length) {
+        // Merge with existing, deduplicate
+        const merged = new Set([...domainFilters, ...academicDomains]);
+        domainFilters = Array.from(merged);
+      } else {
+        domainFilters = academicDomains;
+      }
+      languageFilters = languageFilters ?? ['pt', 'en', 'es'];
+      debug.info('Pipeline', `TCC mode: usando ${domainFilters.length} domínios acadêmicos`);
     }
 
     const searchStart = Date.now();

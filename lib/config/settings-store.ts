@@ -68,6 +68,15 @@ export interface UserPreferences {
     cidade: string;
     ano: string;
     minFontes: number;
+    minPaginas: number;
+    tipoPesquisa: string;
+    areaConhecimento: string;
+    abordagem: string;
+    nivelAcademico: string;
+    dedicatoria: string;
+    agradecimentos: string;
+    epigrafe: string;
+    epigrafeAutor: string;
     enabledSections: string[];
   };
 
@@ -129,7 +138,16 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     orientador: '',
     cidade: '',
     ano: new Date().getFullYear().toString(),
-    minFontes: 15,
+    minFontes: 30,
+    minPaginas: 50,
+    tipoPesquisa: 'revisao_bibliografica',
+    areaConhecimento: '',
+    abordagem: 'qualitativa',
+    nivelAcademico: 'graduacao',
+    dedicatoria: '',
+    agradecimentos: '',
+    epigrafe: '',
+    epigrafeAutor: '',
     enabledSections: ['capa', 'folha_rosto', 'resumo', 'abstract', 'sumario', 'introducao', 'referencial_teorico', 'metodologia', 'resultados', 'conclusao', 'referencias'],
   },
   defaultChatModel: 'openai/gpt-4.1-mini',
