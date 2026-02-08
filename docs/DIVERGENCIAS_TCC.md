@@ -1,7 +1,8 @@
 # DIVERGÊNCIAS: Modo TCC — Solicitado vs Entregue
 
-**Data:** 2026-02-08
-**Documento analisado:** `research-causas-para-a-ascensao-do-stf-no-desenho-instituci.md`
+**Data:** 2026-02-08 (atualizado 08/02 09:43)
+**Documento analisado (v2):** `research-causas-para-a-ascensao-do-stf-no-desenho-instituci (1).md`
+**Log analisado (v2):** `amago-debug-full_2026-02-08T12-42-45.json`
 **Screenshot analisado:** Modal "Exportar Relatório" em produção (Vercel)
 
 ---
@@ -71,23 +72,37 @@
 
 ## 4. CAUSA RAIZ IDENTIFICADA — PREFERÊNCIAS NÃO CHEGAM AO SERVIDOR
 
-### Mecanismo do problema
-1. O frontend salva `researchMode: 'tcc'` em `localStorage` via `savePreferences()`
-2. O `task-manager.ts` (cliente) chama `fetch('/api/research', { body: { query, depth, domainPreset, ... } })` — **NÃO envia `pro` nem `tcc` settings**
-3. O API route (`app/api/research/route.ts`) monta `ResearchRequest` SEM nenhuma informação de modo TCC
-4. O pipeline (`lib/research/pipeline.ts`) chama `loadPreferences()` no servidor
-5. `loadPreferences()` no servidor: `if (typeof window === 'undefined') return { ...DEFAULT_PREFERENCES }` → retorna SEMPRE `researchMode: 'standard'`
-6. O sintetizador TCC **nunca é chamado**
+### Mecanismo do problema (atualizado 08/02 v2)
+
+**PARCIALMENTE CORRIGIDO:** O task-manager AGORA envia `proSettings` e `tccSettings` no body. A API route AGORA os repassa ao `ResearchRequest`. **MAS** o pipeline e o synthesizer continuam chamando `loadPreferences()` internamente e ignorando os campos da request.
+
+1. ✅ O frontend salva `researchMode: 'tcc'` em `localStorage` via `savePreferences()`
+2. ✅ O `task-manager.ts` (cliente) envia `proSettings` e `tccSettings` no body (CORRIGIDO)
+3. ✅ O API route (`app/api/research/route.ts`) repassa `proSettings` e `tccSettings` para `ResearchRequest` (CORRIGIDO)
+4. ❌ **`pipeline.ts:216`** chama `loadPreferences()` para decidir injeção de domínios acadêmicos → sempre `standard`
+5. ❌ **`synthesizer.ts:23`** chama `loadPreferences()` para routing TCC → sempre `standard`
+6. ❌ **`synthesizer.ts:54`** chama `buildSynthesisPrompt()` com `prefs.pro` e `prefs.tcc` de `loadPreferences()` → sempre defaults
+7. ❌ **`synthesizeReport()` NÃO recebe `request.proSettings`/`request.tccSettings`** como parâmetro
+8. ❌ **`pipeline.ts:416`** chama `synthesizeReport(query, sources, depth, config, ...)` sem passar proSettings/tccSettings
+
+### Evidência do log v2 (08/02 09:36)
+```
+Client envia:  hasProSettings=true, hasTccSettings=true, proResearchMode="tcc"
+Servidor log:  serverLogs=[] (vazio — ring buffer não persiste entre requests no Vercel)
+Resultado:     Relatório padrão (seções genéricas, citações [1][2][3])
+```
 
 ### Arquivos envolvidos
-| Arquivo | Problema |
-|---|---|
-| `lib/config/settings-store.ts:164` | `loadPreferences()` retorna defaults no servidor (sem `window`) |
-| `lib/store/task-manager.ts:225-237` | Não envia `pro` nem `tcc` no body da request |
-| `app/api/research/route.ts:15-25` | Não recebe `pro` nem `tcc` do body |
-| `lib/research/pipeline.ts:209` | `loadPreferences()` no servidor retorna `researchMode: 'standard'` |
-| `lib/research/synthesizer.ts:22-27` | Routing para TCC depende de `prefs.pro.researchMode === 'tcc'` que nunca é true no servidor |
-| `config/defaults.ts:781-789` | `exportFormats.options` não inclui `docx` |
+| Arquivo | Problema | Status |
+|---|---|---|
+| `lib/config/settings-store.ts:164` | `loadPreferences()` retorna defaults no servidor (sem `window`) | ⚠️ Causa raiz |
+| `lib/store/task-manager.ts` | Não enviava pro/tcc no body → **CORRIGIDO** | ✅ |
+| `app/api/research/route.ts` | Não repassava pro/tcc → **CORRIGIDO** | ✅ |
+| `lib/research/pipeline.ts:216` | Chama `loadPreferences()` em vez de usar `request.proSettings` | ❌ |
+| `lib/research/synthesizer.ts:23` | Chama `loadPreferences()` em vez de receber proSettings como parâmetro | ❌ |
+| `lib/research/synthesizer.ts:54` | Passa `prefs.pro`/`prefs.tcc` de loadPreferences para buildSynthesisPrompt | ❌ |
+| `lib/research/pipeline.ts:416` | Chama `synthesizeReport()` sem proSettings/tccSettings | ❌ |
+| `config/defaults.ts:781-789` | `exportFormats.options` não inclui `docx` | ❌ |
 
 ---
 
