@@ -44,6 +44,7 @@ export interface ResearchTaskState {
   sourcesKept: number;
   reportText: string;
   metadata: ResearchMetadata | null;
+  pipelineMeta: { synthesizer: 'tcc' | 'standard'; researchMode: string; proSettingsReceived: boolean; tccSettingsReceived: boolean } | null;
   costUSD: number;
   response: ResearchResponse | null;
   error: string | null;
@@ -72,6 +73,7 @@ const DEFAULT_RESEARCH: ResearchTaskState = {
   sourcesKept: 0,
   reportText: '',
   metadata: null,
+  pipelineMeta: null,
   costUSD: 0,
   response: null,
   error: null,
@@ -396,12 +398,14 @@ class TaskManager {
 
       case 'metadata':
         this._research = { ...r, metadata: event.data };
-        if (event.data?.synthesizer) {
-          debug.info('TaskManager', `Pipeline meta: synthesizer=${event.data.synthesizer}, mode=${event.data.researchMode}`, {
-            proSettingsReceived: event.data.proSettingsReceived,
-            tccSettingsReceived: event.data.tccSettingsReceived,
-          });
-        }
+        break;
+
+      case 'pipeline-meta':
+        this._research = { ...r, pipelineMeta: { synthesizer: event.synthesizer, researchMode: event.researchMode, proSettingsReceived: event.proSettingsReceived, tccSettingsReceived: event.tccSettingsReceived } };
+        debug.info('TaskManager', `Pipeline meta: synthesizer=${event.synthesizer}, mode=${event.researchMode}`, {
+          proSettingsReceived: event.proSettingsReceived,
+          tccSettingsReceived: event.tccSettingsReceived,
+        });
         break;
 
       case 'cost':

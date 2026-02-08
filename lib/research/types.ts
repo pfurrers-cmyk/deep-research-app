@@ -319,7 +319,8 @@ export type PipelineEvent =
   | CompleteEvent
   | ErrorEvent
   | ProcessingModeEvent
-  | SectionProgressEvent;
+  | SectionProgressEvent
+  | PipelineMetaEvent;
 
 export interface SectionProgressEvent {
   type: 'section-progress';
@@ -390,6 +391,14 @@ export interface CostEvent {
 export interface MetadataEvent {
   type: 'metadata';
   data: ResearchMetadata;
+}
+
+export interface PipelineMetaEvent {
+  type: 'pipeline-meta';
+  synthesizer: 'tcc' | 'standard';
+  researchMode: string;
+  proSettingsReceived: boolean;
+  tccSettingsReceived: boolean;
 }
 
 export interface CompleteEvent {
