@@ -541,53 +541,63 @@ async function runPipeline(
   emitStage(writer, 'complete', 'completed', 1.0, config);
 
   // Complete event with full response
-  writer.writeEvent({
-    type: 'complete',
-    data: {
-      id: researchId,
-      query: request.query,
-      report: {
-        title: metadata.title,
-        sections: [
-          {
-            id: 'full-report',
-            type: 'executive_summary',
-            title: 'Relatório Completo',
-            content: reportText,
-            confidenceScore: 0.7,
-            sourceIndices: evaluatedSources.map((_, i) => i),
-          },
-        ],
-        citations: evaluatedSources.map((s, i) => ({
-          index: i + 1,
-          url: s.url,
-          title: s.title,
-          snippet: s.snippet,
-          domain: new URL(s.url).hostname,
-          credibilityScore: s.credibilityScore,
-          credibilityTier: s.credibilityTier,
-          publishedDate: s.publishedDate,
-          author: s.author,
+  // NOTE: report text is NOT included here — client already has it from text-delta events.
+  // Including it would create a massive SSE payload that can crash the connection on Vercel.
+  try {
+    writer.writeEvent({
+      type: 'complete',
+      data: {
+        id: researchId,
+        query: request.query,
+        report: {
+          title: metadata.title,
+          sections: [
+            {
+              id: 'full-report',
+              type: 'executive_summary',
+              title: 'Relatório Completo',
+              content: '', // text already streamed via text-delta
+              confidenceScore: 0.7,
+              sourceIndices: evaluatedSources.map((_, i) => i),
+            },
+          ],
+          citations: evaluatedSources.map((s, i) => {
+            let domain = '';
+            try { domain = new URL(s.url).hostname; } catch { domain = s.url; }
+            return {
+              index: i + 1,
+              url: s.url,
+              title: s.title,
+              snippet: s.snippet,
+              domain,
+              credibilityScore: s.credibilityScore,
+              credibilityTier: s.credibilityTier,
+              publishedDate: s.publishedDate,
+              author: s.author,
+            };
+          }),
+          generatedAt: metadata.completedAt,
+          modelUsed: modelsUsed[modelsUsed.length - 1] ?? 'unknown',
+          outputLanguage: config.pipeline.synthesis.outputLanguage,
+        },
+        sources: evaluatedSources,
+        subQueries: subQueries.map((sq) => ({
+          ...sq,
+          status: 'completed' as const,
         })),
-        generatedAt: metadata.completedAt,
-        modelUsed: modelsUsed[modelsUsed.length - 1] ?? 'unknown',
-        outputLanguage: config.pipeline.synthesis.outputLanguage,
+        metadata,
+        confidence: {
+          overall: 0.7,
+          bySection: {},
+          level: 'medium',
+          suggestions: [],
+        },
+        cost: costBreakdown,
       },
-      sources: evaluatedSources,
-      subQueries: subQueries.map((sq) => ({
-        ...sq,
-        status: 'completed' as const,
-      })),
-      metadata,
-      confidence: {
-        overall: 0.7,
-        bySection: {},
-        level: 'medium',
-        suggestions: [],
-      },
-      cost: costBreakdown,
-    },
-  });
+    });
+  } catch (completeErr) {
+    debug.error('Pipeline', `Erro ao enviar complete event: ${completeErr instanceof Error ? completeErr.message : String(completeErr)}`);
+  }
 
   debug.timed('Pipeline', `Pesquisa finalizada: ${evaluatedSources.length} fontes, ${reportText.length} chars, custo=$${costBreakdown.totalCostUSD.toFixed(4)}`, startTime);
   writer.close();
