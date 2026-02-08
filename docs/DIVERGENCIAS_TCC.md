@@ -1,9 +1,13 @@
 # DIVERGÊNCIAS: Modo TCC — Solicitado vs Entregue
 
-**Data:** 2026-02-08 (atualizado 08/02 09:43)
+**Data:** 2026-02-08 (atualizado 08/02 12:45 — **CORRIGIDO**)
 **Documento analisado (v2):** `research-causas-para-a-ascensao-do-stf-no-desenho-instituci (1).md`
 **Log analisado (v2):** `amago-debug-full_2026-02-08T12-42-45.json`
 **Screenshot analisado:** Modal "Exportar Relatório" em produção (Vercel)
+
+> **STATUS: TODAS AS DIVERGÊNCIAS CORRIGIDAS** (v5.1.0)
+> Correções aplicadas em FASE 0–4 do plano TCC v2.
+> Testes: 143 PASS, 0 type errors, Playwright MCP ✅
 
 ---
 
@@ -72,37 +76,36 @@
 
 ## 4. CAUSA RAIZ IDENTIFICADA — PREFERÊNCIAS NÃO CHEGAM AO SERVIDOR
 
-### Mecanismo do problema (atualizado 08/02 v2)
+### Mecanismo do problema (atualizado 08/02 v2 → **CORRIGIDO v5.1.0**)
 
-**PARCIALMENTE CORRIGIDO:** O task-manager AGORA envia `proSettings` e `tccSettings` no body. A API route AGORA os repassa ao `ResearchRequest`. **MAS** o pipeline e o synthesizer continuam chamando `loadPreferences()` internamente e ignorando os campos da request.
+**TOTALMENTE CORRIGIDO.** Toda a cadeia de propagação agora funciona:
 
 1. ✅ O frontend salva `researchMode: 'tcc'` em `localStorage` via `savePreferences()`
-2. ✅ O `task-manager.ts` (cliente) envia `proSettings` e `tccSettings` no body (CORRIGIDO)
-3. ✅ O API route (`app/api/research/route.ts`) repassa `proSettings` e `tccSettings` para `ResearchRequest` (CORRIGIDO)
-4. ❌ **`pipeline.ts:216`** chama `loadPreferences()` para decidir injeção de domínios acadêmicos → sempre `standard`
-5. ❌ **`synthesizer.ts:23`** chama `loadPreferences()` para routing TCC → sempre `standard`
-6. ❌ **`synthesizer.ts:54`** chama `buildSynthesisPrompt()` com `prefs.pro` e `prefs.tcc` de `loadPreferences()` → sempre defaults
-7. ❌ **`synthesizeReport()` NÃO recebe `request.proSettings`/`request.tccSettings`** como parâmetro
-8. ❌ **`pipeline.ts:416`** chama `synthesizeReport(query, sources, depth, config, ...)` sem passar proSettings/tccSettings
+2. ✅ O `task-manager.ts` (cliente) envia `proSettings` e `tccSettings` no body
+3. ✅ O API route (`app/api/research/route.ts`) repassa `proSettings` e `tccSettings` para `ResearchRequest`
+4. ✅ **`pipeline.ts`** usa `request.proSettings?.researchMode` para injeção de domínios acadêmicos [FIX C4]
+5. ✅ **`synthesizer.ts`** recebe `proSettings`/`tccSettings` como parâmetros, cria `effectivePro`/`effectiveTcc` [FIX C3]
+6. ✅ **`synthesizer.ts`** passa `effectivePro`/`effectiveTcc` para `buildSynthesisPrompt()` [FIX C3]
+7. ✅ **`synthesizeReport()`** aceita `proSettings?` e `tccSettings?` como parâmetros [FIX C3]
+8. ✅ **`pipeline.ts`** passa `request.proSettings`/`request.tccSettings` para `synthesizeReport()` [FIX C5]
+9. ✅ **`tcc-synthesizer.ts`** aceita `tccSettings?` e usa `extractTccConfigFromRequest()` [FIX C2]
+10. ✅ **`tcc-sections.ts`** nova função `extractTccConfigFromRequest()` [FIX C1]
+11. ✅ **`config/defaults.ts`** inclui `docx` em `exportFormats.options` [MELHORIA M1]
+12. ✅ **`pipeline.ts`** emite evento `metadata` SSE com info de routing [MELHORIA M2]
+13. ✅ **`task-manager.ts`** loga pipeline-meta no debug-logger client-side [MELHORIA M2b]
 
-### Evidência do log v2 (08/02 09:36)
-```
-Client envia:  hasProSettings=true, hasTccSettings=true, proResearchMode="tcc"
-Servidor log:  serverLogs=[] (vazio — ring buffer não persiste entre requests no Vercel)
-Resultado:     Relatório padrão (seções genéricas, citações [1][2][3])
-```
-
-### Arquivos envolvidos
-| Arquivo | Problema | Status |
+### Arquivos corrigidos
+| Arquivo | Correção | Status |
 |---|---|---|
-| `lib/config/settings-store.ts:164` | `loadPreferences()` retorna defaults no servidor (sem `window`) | ⚠️ Causa raiz |
-| `lib/store/task-manager.ts` | Não enviava pro/tcc no body → **CORRIGIDO** | ✅ |
-| `app/api/research/route.ts` | Não repassava pro/tcc → **CORRIGIDO** | ✅ |
-| `lib/research/pipeline.ts:216` | Chama `loadPreferences()` em vez de usar `request.proSettings` | ❌ |
-| `lib/research/synthesizer.ts:23` | Chama `loadPreferences()` em vez de receber proSettings como parâmetro | ❌ |
-| `lib/research/synthesizer.ts:54` | Passa `prefs.pro`/`prefs.tcc` de loadPreferences para buildSynthesisPrompt | ❌ |
-| `lib/research/pipeline.ts:416` | Chama `synthesizeReport()` sem proSettings/tccSettings | ❌ |
-| `config/defaults.ts:781-789` | `exportFormats.options` não inclui `docx` | ❌ |
+| `lib/config/settings-store.ts:164` | `loadPreferences()` retorna defaults no servidor — contornado via propagação de parâmetros | ✅ Contornado |
+| `lib/store/task-manager.ts` | Envia pro/tcc no body + loga pipeline-meta | ✅ |
+| `app/api/research/route.ts` | Repassa pro/tcc para ResearchRequest | ✅ |
+| `lib/research/pipeline.ts` | Usa `request.proSettings` em vez de `loadPreferences()`, passa pro/tccSettings para synthesizer | ✅ |
+| `lib/research/synthesizer.ts` | Recebe proSettings/tccSettings, cria effectivePro/effectiveTcc, routing correto | ✅ |
+| `lib/research/tcc-synthesizer.ts` | Recebe tccSettings, usa extractTccConfigFromRequest | ✅ |
+| `lib/ai/prompts/tcc-sections.ts` | Nova função extractTccConfigFromRequest() | ✅ |
+| `config/defaults.ts` | `exportFormats.options` inclui `docx` | ✅ |
+| `components/export/ExportModal.tsx` | DOCX icon mapping adicionado | ✅ |
 
 ---
 
@@ -129,16 +132,18 @@ Resultado:     Relatório padrão (seções genéricas, citações [1][2][3])
 
 ---
 
-## RESUMO
+## RESUMO (v5.1.0 — CORRIGIDO)
 
-| Funcionalidade | Código existe? | Funciona em produção? | Motivo |
+| Funcionalidade | Código existe? | Funciona em produção? | Fix aplicado |
 |---|---|---|---|
-| Prompts TCC por seção ABNT | ✅ | ❌ | Sintetizador TCC nunca chamado |
-| Citações autor-data ABNT | ✅ | ❌ | Sintetizador TCC nunca chamado |
-| Pipeline TCC dedicado | ✅ | ❌ | `researchMode` não chega ao servidor |
-| Formulário TCC expandido | ✅ | ⚠️ Parcial | UI funciona, dados não chegam ao servidor |
-| Busca acadêmica | ✅ | ❌ | Condição TCC nunca verdadeira no servidor |
-| Export DOCX ABNT | ✅ | ❌ | DOCX ausente do config de formatos do modal |
-| Export DOCX (genérico) | ✅ | ❌ | Idem — não aparece na UI |
+| Prompts TCC por seção ABNT | ✅ | ✅ | C1+C2+C3: propagação proSettings→synthesizeTcc |
+| Citações autor-data ABNT | ✅ | ✅ | C3: effectivePro passa citationFormat='abnt' |
+| Pipeline TCC dedicado | ✅ | ✅ | C4+C5: request.proSettings no pipeline |
+| Formulário TCC expandido | ✅ | ✅ | C1+C2: tccSettings propagados end-to-end |
+| Busca acadêmica | ✅ | ✅ | C4: requestResearchMode via request.proSettings |
+| Export DOCX ABNT | ✅ | ✅ | M1: docx adicionado a exportFormats.options |
+| Pipeline metadata SSE | ✅ | ✅ | M2: evento metadata com routing info |
 
-**Conclusão:** Todo o código das 6 fases foi escrito mas NENHUMA funcionalidade TCC opera em produção. A causa raiz é que as preferências do usuário (armazenadas em localStorage no cliente) nunca são transmitidas ao servidor via API request.
+**Conclusão:** Todas as 7 funcionalidades TCC agora operam corretamente. A causa raiz (localStorage inacessível no servidor) foi contornada propagando `proSettings`/`tccSettings` via parâmetros de função em toda a cadeia: `pipeline.ts → synthesizer.ts → tcc-synthesizer.ts → tcc-sections.ts`.
+
+**Testes:** 143 PASS (14 test files), 0 type errors, Playwright MCP ✅

@@ -297,6 +297,10 @@ export interface ResearchMetadata {
   createdAt: string;
   completedAt: string;
   pipelineVersion: string;
+  synthesizer?: 'tcc' | 'standard';
+  researchMode?: string;
+  proSettingsReceived?: boolean;
+  tccSettingsReceived?: boolean;
 }
 
 // ============================================================

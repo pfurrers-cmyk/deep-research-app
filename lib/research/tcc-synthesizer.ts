@@ -3,7 +3,8 @@
 import { streamText } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { selectModel } from '@/lib/ai/model-router';
-import { buildTccSections, extractTccConfig, type TccSectionDef, type TccPromptContext } from '@/lib/ai/prompts/tcc-sections';
+import { buildTccSections, extractTccConfig, extractTccConfigFromRequest, type TccSectionDef, type TccPromptContext } from '@/lib/ai/prompts/tcc-sections';
+import type { ResearchRequest } from '@/lib/research/types';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
 import { loadPreferences } from '@/lib/config/settings-store';
@@ -26,11 +27,13 @@ export async function synthesizeTcc(
   onTextDelta?: (delta: string) => void,
   onSectionProgress?: (progress: SectionProgress) => void,
   attachments?: ResearchAttachment[],
+  tccSettings?: ResearchRequest['tccSettings'],
 ): Promise<string> {
-  const prefs = loadPreferences();
+  const tccConfig = tccSettings
+    ? extractTccConfigFromRequest(tccSettings)
+    : extractTccConfig(loadPreferences());
   const modelSelection = selectModel('synthesis', 'auto', depth, config);
   const modelId = modelSelection.modelId;
-  const tccConfig = extractTccConfig(prefs);
 
   // Build TCC section definitions
   const sections = buildTccSections(tccConfig);

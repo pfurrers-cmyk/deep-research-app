@@ -786,6 +786,7 @@ export const APP_CONFIG = {
         podcast: { label: 'Script Podcast', icon: '🎙️', description: 'Roteiro conversacional para áudio', color: 'text-purple-400' },
         social: { label: 'Thread Social', icon: '🐦', description: 'Posts encadeados para redes sociais', color: 'text-cyan-400' },
         json: { label: 'JSON / CSV', icon: '💾', description: 'Dados estruturados para análise', color: 'text-green-400' },
+        docx: { label: 'DOCX', icon: '📄', description: 'Documento Word (ABNT para TCC)', color: 'text-blue-500' },
       } as Record<string, { label: string; icon: string; description: string; color: string }>,
       default: 'markdown' as string,
     },
