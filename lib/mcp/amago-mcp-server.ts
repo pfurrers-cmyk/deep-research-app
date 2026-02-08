@@ -5,6 +5,7 @@
  *  - get_server_logs: Logs do servidor com filtros
  *  - get_app_status: Status do app, modo TCC, configuração
  *  - get_divergence_report: Relatório de divergências TCC
+ *  - get_reverse_prompt: Prompt reverso estruturado para diagnóstico e correção do modo TCC
  *  - read_source_file: Lê arquivo-fonte do projeto
  *  - list_key_files: Lista arquivos-chave do projeto
  */
@@ -186,6 +187,33 @@ export function createAmagoMcpServer(): McpServer {
   );
 
   // ============================================================
+  // TOOL: get_reverse_prompt
+  // ============================================================
+  server.tool(
+    'get_reverse_prompt',
+    'Retorna o prompt reverso estruturado com diagnóstico completo, cadeia de falha, e plano de correção do modo TCC ABNT. Use este documento como guia principal para corrigir os problemas do app.',
+    async () => {
+      const docPath = path.join(PROJECT_ROOT, 'docs', 'PROMPT_REVERSO_CLAUDE_MCP.md');
+      try {
+        const content = fs.readFileSync(docPath, 'utf-8');
+        return {
+          content: [{
+            type: 'text' as const,
+            text: content,
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Erro ao ler prompt reverso: ${err instanceof Error ? err.message : String(err)}`,
+          }],
+        };
+      }
+    },
+  );
+
+  // ============================================================
   // TOOL: read_source_file
   // ============================================================
   server.tool(
@@ -308,6 +336,7 @@ export function createAmagoMcpServer(): McpServer {
         'app/api/mcp/route.ts',
         'config/defaults.ts',
         'docs/DIVERGENCIAS_TCC.md',
+        'docs/PROMPT_REVERSO_CLAUDE_MCP.md',
       ];
 
       const listing = keyFiles.map(f => {
