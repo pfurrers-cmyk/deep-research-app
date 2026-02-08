@@ -277,6 +277,8 @@ class TaskManager {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let textDeltaCount = 0;
+      let textDeltaChars = 0;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -294,13 +296,23 @@ class TaskManager {
 
           try {
             const event = JSON.parse(data) as PipelineEvent;
-            debug.debug('TaskManager', `SSE event: ${event.type}`, {
-              type: event.type,
-              ...(event.type === 'stage' ? { stage: (event as any).stage, status: (event as any).status, progress: (event as any).progress } : {}),
-              ...(event.type === 'text-delta' ? { textLen: ((event as any).text || '').length } : {}),
-              ...(event.type === 'section-progress' ? { sectionId: (event as any).sectionId, sectionStatus: (event as any).status } : {}),
-              ...(event.type === 'error' ? { error: (event as any).error } : {}),
-            });
+            // Log non-text-delta events at INFO; aggregate text-deltas to avoid flooding the 1000-entry buffer
+            if (event.type === 'text-delta') {
+              textDeltaCount++;
+              textDeltaChars += ((event as any).text || '').length;
+              if (textDeltaCount % 100 === 0) {
+                debug.info('TaskManager', `SSE text-delta x${textDeltaCount} (${textDeltaChars} chars acumulados)`);
+              }
+            } else {
+              debug.info('TaskManager', `SSE event: ${event.type}`, {
+                type: event.type,
+                ...(event.type === 'stage' ? { stage: (event as any).stage, status: (event as any).status, progress: (event as any).progress } : {}),
+                ...(event.type === 'section-progress' ? { sectionId: (event as any).sectionId, sectionStatus: (event as any).status } : {}),
+                ...(event.type === 'error' ? { error: (event as any).error } : {}),
+                ...(event.type === 'complete' ? { hasReport: !!(event as any).data?.report } : {}),
+                ...(event.type === 'metadata' ? { id: (event as any).data?.id } : {}),
+              });
+            }
             this._processResearchEvent(event);
           } catch (parseErr) {
             debug.warn('TaskManager', `SSE parse error: ${parseErr}`, { rawData: data.slice(0, 200) });
@@ -318,6 +330,11 @@ class TaskManager {
         }
       }
 
+      // Log final summary of text-delta events
+      if (textDeltaCount > 0) {
+        debug.info('TaskManager', `Stream finalizado: ${textDeltaCount} text-deltas, ${textDeltaChars} chars total`);
+      }
+
       if (this._research.status === 'running') {
         this._research = { ...this._research, status: 'complete' };
         this._notify();
@@ -325,7 +342,20 @@ class TaskManager {
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      debug.error('TaskManager', `Erro na pesquisa: ${msg}`);
+
+      // If we already have substantial report text, treat stream interruption as success
+      const hasReport = (this._research.reportText?.length ?? 0) > 500;
+      if (hasReport && (msg === 'network error' || msg.includes('network') || msg.includes('Failed to fetch'))) {
+        debug.warn('TaskManager', `Stream interrompido com network error, mas relatório já recebido (${this._research.reportText?.length} chars). Tratando como sucesso.`);
+        this._research = { ...this._research, status: 'complete' };
+        this._notify();
+        return;
+      }
+
+      debug.error('TaskManager', `Erro na pesquisa: ${msg}`, {
+        reportTextLength: this._research.reportText?.length ?? 0,
+        hadReport: hasReport,
+      });
       this._research = { ...this._research, status: 'error', error: msg };
       this._notify();
     }
@@ -421,7 +451,7 @@ class TaskManager {
         depth: data.metadata.depth,
         domainPreset: data.metadata.domainPreset,
         modelPreference: data.metadata.modelPreference,
-        reportText: data.report.sections.map((s) => s.content).join('\n\n'),
+        reportText: this._research.reportText || data.report.sections.map((s) => s.content).join('\n\n'),
         citations: data.report.citations.map((c) => ({
           index: c.index, url: c.url, title: c.title,
           snippet: c.snippet, domain: c.domain,
