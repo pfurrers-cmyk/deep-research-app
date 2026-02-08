@@ -18,9 +18,9 @@ Write-Host "  SMART DEPLOY - Deep Research App"  -ForegroundColor Cyan
 Write-Host "========================================`n"  -ForegroundColor Cyan
 
 # ============================================================
-# [1/8] BUILD INFO
+# [1/9] BUILD INFO
 # ============================================================
-Write-Host "[1/8] Atualizando buildInfo.ts (timestamp + commitHash)..."  -ForegroundColor Yellow
+Write-Host "[1/9] Atualizando buildInfo.ts (timestamp + commitHash)..."  -ForegroundColor Yellow
 $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 $hash = git rev-parse --short HEAD 2>$null
 if (-not $hash) { $hash = "unknown" }
@@ -32,12 +32,34 @@ $biContent = $biContent -replace "commitHash: '.*?'", "commitHash: '$hash'"
 Write-Host "  -> buildTimestamp: $ts | commitHash: $hash"  -ForegroundColor Gray
 
 # ============================================================
-# [2/8] TESTES UNITARIOS PRE-DEPLOY
+# [2/9] TYPE CHECK (tsc --noEmit)
 # ============================================================
 if ($SkipTests) {
-    Write-Host "[2/8] TESTES IGNORADOS (-SkipTests)"  -ForegroundColor DarkYellow
+    Write-Host "[2/9] TYPE CHECK IGNORADO (-SkipTests)"  -ForegroundColor DarkYellow
 } else {
-    Write-Host "[2/8] Rodando testes unitarios..."  -ForegroundColor Yellow
+    Write-Host "[2/9] Verificando tipos (tsc --noEmit --pretty)..."  -ForegroundColor Yellow
+    $tscOutput = npx -y tsc --noEmit --pretty 2>&1
+    $tscExit = $LASTEXITCODE
+    if ($tscExit -ne 0) {
+        Write-Host ""
+        Write-Host "  TYPE CHECK FALHOU - Deploy bloqueado. Corrija os erros de tipo antes de deployar."  -ForegroundColor Red
+        Write-Host ""
+        $tscOutput | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_"  -ForegroundColor Red }
+        Write-Host "`n========================================" -ForegroundColor Red
+        Write-Host "  RESULTADO: TSC_FAILED" -ForegroundColor Red
+        Write-Host "========================================`n" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  -> tsc --noEmit: sem erros"  -ForegroundColor Green
+}
+
+# ============================================================
+# [3/9] TESTES UNITARIOS PRE-DEPLOY
+# ============================================================
+if ($SkipTests) {
+    Write-Host "[3/9] TESTES IGNORADOS (-SkipTests)"  -ForegroundColor DarkYellow
+} else {
+    Write-Host "[3/9] Rodando testes unitarios..."  -ForegroundColor Yellow
     $testOutput = npx vitest run --reporter=verbose 2>&1
     $testExit = $LASTEXITCODE
     if ($testExit -ne 0) {
@@ -60,32 +82,32 @@ if ($SkipTests) {
 }
 
 # ============================================================
-# [3/8] STAGING
+# [4/9] STAGING
 # ============================================================
-Write-Host "[3/8] Staging changes..."  -ForegroundColor Yellow
+Write-Host "[4/9] Staging changes..."  -ForegroundColor Yellow
 git add -A 2>&1 | Out-Null
 $st = git status --porcelain
 if (-not $st) { Write-Host "  -> Nenhuma alteracao. Abortando."  -ForegroundColor Red; exit 0 }
 Write-Host "  -> Arquivos alterados"  -ForegroundColor Gray
 
 # ============================================================
-# [4/8] COMMIT
+# [5/9] COMMIT
 # ============================================================
-Write-Host "[4/8] Commit: $CommitMessage"  -ForegroundColor Yellow
+Write-Host "[5/9] Commit: $CommitMessage"  -ForegroundColor Yellow
 git commit -m $CommitMessage 2>&1 | Out-Null
 
 # ============================================================
-# [5/8] BRANCH + PUSH
+# [6/9] BRANCH + PUSH
 # ============================================================
-Write-Host "[5/8] Criando branch $DeployBranch e push..."  -ForegroundColor Yellow
+Write-Host "[6/9] Criando branch $DeployBranch e push..."  -ForegroundColor Yellow
 git checkout -b $DeployBranch 2>&1 | Out-Null
 git push origin $DeployBranch 2>&1 | Out-Null
 Write-Host "  -> Branch pushed"  -ForegroundColor Gray
 
 # ============================================================
-# [6/8] PULL REQUEST
+# [7/9] PULL REQUEST
 # ============================================================
-Write-Host "[6/8] Criando Pull Request..."  -ForegroundColor Yellow
+Write-Host "[7/9] Criando Pull Request..."  -ForegroundColor Yellow
 $ghOk = $false
 try { Get-Command gh -ErrorAction Stop | Out-Null; $ghOk = $true } catch {}
 $prUrl = ""
@@ -97,11 +119,11 @@ if ($ghOk) {
 } else { Write-Host "  -> gh CLI indisponivel, merge direto..."  -ForegroundColor DarkYellow }
 
 # ============================================================
-# [7/8] AGUARDAR CHECKS
+# [8/9] AGUARDAR CHECKS
 # ============================================================
 $deployResult = "DIRECT_MERGE"
 if ($prUrl) {
-    Write-Host "[7/8] Aguardando checks (timeout ${MaxWaitSeconds}s)..."  -ForegroundColor Yellow
+    Write-Host "[8/9] Aguardando checks (timeout ${MaxWaitSeconds}s)..."  -ForegroundColor Yellow
     Write-Host "  NOTA: e2e-tests e llm-evals sao advisory (continue-on-error)"  -ForegroundColor DarkGray
     $elapsed = 0
     $deployResult = "TIMEOUT"
@@ -165,24 +187,24 @@ if ($prUrl) {
     }
 
     # ============================================================
-    # [8/8] MERGE
+    # [9/9] MERGE
     # ============================================================
     if ($deployResult -eq "CHECK_FAILED") {
-        Write-Host "[8/8] MERGE BLOQUEADO - Check obrigatorio falhou"  -ForegroundColor Red
+        Write-Host "[9/9] MERGE BLOQUEADO - Check obrigatorio falhou"  -ForegroundColor Red
     } else {
-        Write-Host "[8/8] Merge da PR..."  -ForegroundColor Yellow
+        Write-Host "[9/9] Merge da PR..."  -ForegroundColor Yellow
         gh pr merge $DeployBranch --merge --delete-branch 2>&1 | Out-Null
         Write-Host "  -> PR merged e branch deletada"  -ForegroundColor Green
     }
 } else {
-    Write-Host "[7/8] Merge direto no $MainBranch..."  -ForegroundColor Yellow
+    Write-Host "[8/9] Merge direto no $MainBranch..."  -ForegroundColor Yellow
     git checkout $MainBranch 2>&1 | Out-Null
     git merge $DeployBranch 2>&1 | Out-Null
     git push origin $MainBranch 2>&1 | Out-Null
     git branch -d $DeployBranch 2>&1 | Out-Null
     git push origin --delete $DeployBranch 2>&1 | Out-Null
     Write-Host "  -> Merged e branch deletada"  -ForegroundColor Green
-    Write-Host "[8/8] Deploy acionado via push"  -ForegroundColor Green
+    Write-Host "[9/9] Deploy acionado via push"  -ForegroundColor Green
 }
 
 git checkout $MainBranch 2>&1 | Out-Null

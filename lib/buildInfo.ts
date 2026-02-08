@@ -1,10 +1,21 @@
 // lib/buildInfo.ts — Atualizado automaticamente pelo smart-deploy.ps1
 export const BUILD_INFO = {
-  version: '5.0.0',
-  buildTimestamp: '2026-02-08T14:07:54.216Z',
-  commitHash: '6ed1d6e',
+  version: '5.1.0',
+  buildTimestamp: '2026-02-08T15:46:02.510Z',
+  commitHash: 'd5bc7dd',
   branch: 'master',
   changelog: [
+    // ── v5.1.0 (MINOR) ── Fix TCC mode + melhorias deploy
+    'TCC Fix: Propagação end-to-end de proSettings/tccSettings via parâmetros (não mais localStorage no servidor)',
+    'TCC Fix: synthesizer.ts recebe proSettings/tccSettings, cria effectivePro/effectiveTcc para routing correto',
+    'TCC Fix: pipeline.ts usa request.proSettings para domínios acadêmicos e passa settings para synthesizeReport()',
+    'TCC Fix: tcc-synthesizer.ts aceita tccSettings via extractTccConfigFromRequest() (nova função)',
+    'TCC Fix: Evento SSE metadata com info de routing (synthesizer, researchMode, proSettings/tccSettings recebidos)',
+    'TCC Fix: TaskManager loga pipeline-meta no debug-logger client-side (visível no FloatingLogButton)',
+    'Export: DOCX adicionado como formato de exportação no modal (ícone + descrição ABNT para TCC)',
+    'Deploy: smart-deploy.ps1 com tsc --noEmit obrigatório como step [2/9] antes dos testes',
+    'Testes: 5 testes de routing synthesizer (Versão B) + marcadores semânticos ABNT vs standard',
+
     // ── v5.0.0 (MAJOR) ──
     'Anti-truncamento: Removidos TODOS os limites artificiais de tokens (maxOutputTokens) de síntese, follow-up e prompts',
     'Anti-truncamento: Detecção automática de truncamento via finishReason com aviso visual ao usuário',
@@ -128,5 +139,5 @@ export const BUILD_INFO = {
     'FASE 10: Polimento (focus-visible rings, fade-in animations)',
     'Fix: geração de imagem — statusCode < 400 forçado a 500, validação bytes vazios',
   ],
-  previousVersion: '4.1.1',
+  previousVersion: '5.0.0',
 };

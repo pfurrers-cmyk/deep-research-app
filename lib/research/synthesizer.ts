@@ -4,8 +4,8 @@ import { gateway } from '@ai-sdk/gateway';
 import { selectModel } from '@/lib/ai/model-router';
 import { buildSynthesisPrompt } from '@/lib/ai/prompts/synthesis';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
-import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
-import { loadPreferences } from '@/lib/config/settings-store';
+import type { EvaluatedSource, ResearchAttachment, ResearchRequest } from '@/lib/research/types';
+import { loadPreferences, type UserPreferences } from '@/lib/config/settings-store';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
 import { debug } from '@/lib/utils/debug-logger';
 import { shouldUseMultiSection, synthesizeBySection, type SectionProgress } from '@/lib/research/section-synthesizer';
@@ -19,39 +19,50 @@ export async function synthesizeReport(
   onTextDelta?: (delta: string) => void,
   attachments?: ResearchAttachment[],
   onSectionProgress?: (progress: SectionProgress) => void,
+  proSettings?: ResearchRequest['proSettings'],
+  tccSettings?: ResearchRequest['tccSettings'],
 ): Promise<string> {
   const prefs = loadPreferences();
+  const effectivePro = proSettings
+    ? { ...prefs.pro, ...proSettings }
+    : prefs.pro;
+  const effectiveTcc = tccSettings
+    ? { ...prefs.tcc, ...tccSettings }
+    : prefs.tcc;
 
   debug.info('Synthesizer', 'ROTEAMENTO DE SÍNTESE', {
-    researchMode: prefs.pro.researchMode,
-    isTcc: prefs.pro.researchMode === 'tcc',
-    detailLevel: prefs.pro.detailLevel,
-    citationFormat: prefs.pro.citationFormat,
-    writingStyle: prefs.pro.writingStyle,
+    researchMode: effectivePro.researchMode,
+    isTcc: effectivePro.researchMode === 'tcc',
+    detailLevel: effectivePro.detailLevel,
+    citationFormat: effectivePro.citationFormat,
+    writingStyle: effectivePro.writingStyle,
     sourceCount: sources.length,
     isServer: typeof window === 'undefined',
-    NOTE: typeof window === 'undefined'
-      ? 'SERVIDOR: loadPreferences() retorna DEFAULTS (localStorage indisponível)'
-      : 'CLIENTE: loadPreferences() lê localStorage',
+    proSettingsReceived: !!proSettings,
+    tccSettingsReceived: !!tccSettings,
   });
 
   // TCC mode uses dedicated TCC synthesizer with ABNT structure
-  if (prefs.pro.researchMode === 'tcc') {
+  if (effectivePro.researchMode === 'tcc') {
     debug.info('Synthesizer', '✅ ROTA TCC ATIVADA — usando synthesizeTcc()');
-    return synthesizeTcc(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
+    return synthesizeTcc(query, sources, depth, config, onTextDelta, onSectionProgress, attachments, tccSettings);
   }
 
   debug.info('Synthesizer', '❌ ROTA TCC NÃO ATIVADA — usando sintetizador padrão', {
-    reason: `researchMode='${prefs.pro.researchMode}' (!= 'tcc')`,
+    reason: `researchMode='${effectivePro.researchMode}' (!= 'tcc')`,
   });
 
   // Check if multi-section synthesis should be used for non-TCC
-  if (shouldUseMultiSection(prefs.pro.researchMode, prefs.pro.detailLevel, sources.length)) {
+  if (shouldUseMultiSection(effectivePro.researchMode, effectivePro.detailLevel, sources.length)) {
     return synthesizeBySection(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
   }
 
   const modelSelection = selectModel('synthesis', 'auto', depth, config);
-  const { system, prompt: basePrompt } = buildSynthesisPrompt(query, sources, config, undefined, prefs.pro, prefs.tcc);
+  const { system, prompt: basePrompt } = buildSynthesisPrompt(
+    query, sources, config, undefined,
+    effectivePro as UserPreferences['pro'],
+    effectiveTcc as UserPreferences['tcc'],
+  );
 
   // Inject attachment context into the prompt
   let prompt = basePrompt;

@@ -17,7 +17,6 @@ import { resolveProcessingMode, getMapBatchSize, getModeOverhead } from '@/confi
 import { createSSEStream, type SSEWriter } from '@/lib/utils/streaming';
 import { debug } from '@/lib/utils/debug-logger';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
-import { loadPreferences } from '@/lib/config/settings-store';
 import type { AppConfig, DepthPreset } from '@/config/defaults';
 import type {
   ResearchRequest,
@@ -105,6 +104,7 @@ async function runPipeline(
   startTime: number
 ) {
   const modelsUsed: string[] = [];
+  const requestResearchMode = request.proSettings?.researchMode ?? 'standard';
 
   // Source limits (manual override or preset defaults)
   const maxSourcesFetch = request.sourceConfig?.fetchMax ?? preset.maxSources;
@@ -213,8 +213,7 @@ async function runPipeline(
     }
 
     // TCC mode: enhance with academic domains for higher source quality
-    const pipelinePrefs = loadPreferences();
-    if (pipelinePrefs.pro.researchMode === 'tcc') {
+    if (requestResearchMode === 'tcc') {
       const academicDomains = [
         'scielo.br', 'scholar.google.com', 'periodicos.capes.gov.br',
         'bdtd.ibict.br', 'repositorio.usp.br', 'repositorio.unicamp.br',
@@ -403,6 +402,18 @@ async function runPipeline(
   // =========================================================
   // ETAPA 6: Síntese do Relatório — Roteamento por Modo
   // =========================================================
+  const synthesizerMode = requestResearchMode === 'tcc' ? 'tcc' as const : 'standard' as const;
+  writer.writeEvent({
+    type: 'metadata',
+    data: {
+      synthesizer: synthesizerMode,
+      researchMode: requestResearchMode,
+      proSettingsReceived: !!request.proSettings,
+      tccSettingsReceived: !!request.tccSettings,
+    } as ResearchMetadata,
+  });
+  debug.info('Pipeline', `Pipeline meta: synthesizer=${synthesizerMode}, proSettings=${!!request.proSettings}, tccSettings=${!!request.tccSettings}`);
+
   emitStage(writer, 'synthesizing', 'running', 0.7, config);
 
   let reportText = '';
@@ -424,7 +435,9 @@ async function runPipeline(
         request.attachments,
         (progress) => {
           writer.writeEvent({ type: 'section-progress', ...progress });
-        }
+        },
+        request.proSettings,
+        request.tccSettings,
       );
 
       costTracker.addEntry(

@@ -22,6 +22,7 @@ interface ExportModalProps {
 const FORMAT_ICONS: Record<string, typeof FileText> = {
   markdown: FileText,
   pdf: FileDown,
+  docx: FileDown,
   slides: Presentation,
   podcast: Mic,
   social: MessageCircle,

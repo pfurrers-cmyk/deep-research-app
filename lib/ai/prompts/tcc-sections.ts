@@ -593,8 +593,50 @@ NÃO numere as referências — apenas liste em ordem alfabética.`,
 }
 
 // ============================================================
-// HELPER: Extract TCC config from preferences
+// HELPER: Extract TCC config from preferences or request settings
 // ============================================================
+
+export function extractTccConfigFromRequest(
+  tccSettings?: {
+    titulo?: string;
+    autor?: string;
+    instituicao?: string;
+    curso?: string;
+    orientador?: string;
+    cidade?: string;
+    ano?: string;
+    minFontes?: number;
+    minPaginas?: number;
+    tipoPesquisa?: string;
+    areaConhecimento?: string;
+    abordagem?: string;
+    nivelAcademico?: string;
+    dedicatoria?: string;
+    agradecimentos?: string;
+    epigrafe?: string;
+    epigrafeAutor?: string;
+  }
+): TccConfig {
+  return {
+    titulo: tccSettings?.titulo || '[Título do TCC]',
+    autor: tccSettings?.autor || '[Autor]',
+    instituicao: tccSettings?.instituicao || '[Instituição]',
+    curso: tccSettings?.curso || '[Curso]',
+    orientador: tccSettings?.orientador || '[Orientador(a)]',
+    cidade: tccSettings?.cidade || '[Cidade]',
+    ano: tccSettings?.ano || new Date().getFullYear().toString(),
+    minFontes: tccSettings?.minFontes ?? 30,
+    minPaginas: tccSettings?.minPaginas ?? 50,
+    tipoPesquisa: tccSettings?.tipoPesquisa || 'revisao_bibliografica',
+    areaConhecimento: tccSettings?.areaConhecimento || '',
+    abordagem: tccSettings?.abordagem || 'qualitativa',
+    nivelAcademico: tccSettings?.nivelAcademico || 'graduacao',
+    dedicatoria: tccSettings?.dedicatoria || '',
+    agradecimentos: tccSettings?.agradecimentos || '',
+    epigrafe: tccSettings?.epigrafe || '',
+    epigrafeAutor: tccSettings?.epigrafeAutor || '',
+  };
+}
 
 export function extractTccConfig(prefs: UserPreferences): TccConfig {
   return {

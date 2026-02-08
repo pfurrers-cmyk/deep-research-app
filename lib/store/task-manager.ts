@@ -396,6 +396,12 @@ class TaskManager {
 
       case 'metadata':
         this._research = { ...r, metadata: event.data };
+        if (event.data?.synthesizer) {
+          debug.info('TaskManager', `Pipeline meta: synthesizer=${event.data.synthesizer}, mode=${event.data.researchMode}`, {
+            proSettingsReceived: event.data.proSettingsReceived,
+            tccSettingsReceived: event.data.tccSettingsReceived,
+          });
+        }
         break;
 
       case 'cost':
