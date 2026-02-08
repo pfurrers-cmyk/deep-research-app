@@ -8,6 +8,7 @@ import type { EvaluatedSource, ResearchAttachment } from '@/lib/research/types';
 import { loadPreferences } from '@/lib/config/settings-store';
 import { getSafetyProviderOptions } from '@/config/safety-settings';
 import { shouldUseMultiSection, synthesizeBySection, type SectionProgress } from '@/lib/research/section-synthesizer';
+import { synthesizeTcc } from '@/lib/research/tcc-synthesizer';
 
 export async function synthesizeReport(
   query: string,
@@ -20,7 +21,12 @@ export async function synthesizeReport(
 ): Promise<string> {
   const prefs = loadPreferences();
 
-  // Check if multi-section synthesis should be used
+  // TCC mode uses dedicated TCC synthesizer with ABNT structure
+  if (prefs.pro.researchMode === 'tcc') {
+    return synthesizeTcc(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
+  }
+
+  // Check if multi-section synthesis should be used for non-TCC
   if (shouldUseMultiSection(prefs.pro.researchMode, prefs.pro.detailLevel, sources.length)) {
     return synthesizeBySection(query, sources, depth, config, onTextDelta, onSectionProgress, attachments);
   }

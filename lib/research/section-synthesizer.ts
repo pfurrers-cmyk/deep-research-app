@@ -65,8 +65,8 @@ export function shouldUseMultiSection(
   detailLevel: string,
   sourceCount: number,
 ): boolean {
-  // TCC mode always uses multi-section
-  if (researchMode === 'tcc') return true;
+  // TCC mode is handled by dedicated tcc-synthesizer.ts (not here)
+  if (researchMode === 'tcc') return false;
   // Exhaustive with many sources uses multi-section
   if (detailLevel === 'exhaustive' && sourceCount > 10) return true;
   return false;

@@ -1,5 +1,7 @@
 // lib/export/converters.ts — Export converters for multiple output formats
 import { debug } from '@/lib/utils/debug-logger';
+import { loadPreferences } from '@/lib/config/settings-store';
+import { exportToDocxAbnt } from '@/lib/export/docx-abnt';
 import {
   Document,
   Packer,
@@ -474,7 +476,23 @@ export function exportReport(format: string, input: ExportInput): ExportResult |
     case 'podcast': return exportToPodcastScript(input);
     case 'social': return exportToSocialThread(input);
     case 'json': return exportToJSON(input);
-    case 'docx': return exportToDocx(input);
+    case 'docx': {
+      // Use ABNT-formatted DOCX when TCC mode is active
+      const exportPrefs = loadPreferences();
+      if (exportPrefs.pro.researchMode === 'tcc') {
+        return exportToDocxAbnt({
+          reportText: input.reportText,
+          query: input.query,
+          tccConfig: exportPrefs.tcc,
+        }).then((abntBlob) => ({
+          content: '',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          filename: `tcc-${slugify(input.query)}.docx`,
+          blob: abntBlob,
+        }));
+      }
+      return exportToDocx(input);
+    }
     default: return exportToMarkdown(input);
   }
 }
